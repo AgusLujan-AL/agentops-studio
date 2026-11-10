@@ -16,8 +16,18 @@ const DEFAULT_COORDS = {
   CO: { lat: 4.6533, lng: -74.0560 }
 };
 
+function speakCallbotReply(text, lang = 'es') {
+  const voiceEnabled = document.getElementById('sim-voice-tts')?.checked;
+  if (!voiceEnabled || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const cleanText = text.replace(/[*_`📍💳✅👩‍💻🛡️⚠️1️⃣2️⃣3️⃣📫•]/g, '');
+  const utter = new SpeechSynthesisUtterance(cleanText);
+  utter.lang = lang === 'pt' ? 'pt-BR' : 'es-AR';
+  utter.rate = 1.04;
+  window.speechSynthesis.speak(utter);
+}
+
 async function initApp() {
-  // Tabs navigation
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -31,7 +41,6 @@ async function initApp() {
   const data = await res.json();
   countriesMeta = data.countries;
 
-  // Populate country select & table
   const countrySelect = document.getElementById('sim-country');
   const tbody = document.querySelector('#countries-table tbody');
   countrySelect.innerHTML = '';
@@ -69,11 +78,24 @@ async function initApp() {
     document.getElementById('hour-label').textContent = `${String(hourInput.value).padStart(2, '0')}:00 hs`;
   });
 
-  // Quick scenario buttons
-  document.querySelectorAll('.scenario-btn').forEach(btn => {
+  document.querySelectorAll('.scenario-btn[data-msg]').forEach(btn => {
     btn.addEventListener('click', () => {
       sendMessage(btn.dataset.msg);
     });
+  });
+
+  // Botón de Plantilla HSM Saliente (Outreach ventana 24h)
+  document.getElementById('btn-send-hsm').addEventListener('click', () => {
+    const code = document.getElementById('sim-country').value || 'AR';
+    const c = countriesMeta[code];
+    const hsmText = c.lang === 'pt'
+      ? `📲 **[Template HSM Aprovado · Janela 24h]**\nOlá! Identificamos uma condição especial para regularizar seu contrato em **${c.name}** com até **25% de desconto**.\nSelecione uma opção rápida abaixo:`
+      : `📲 **[Plantilla HSM Aprobada · Ventana 24h]**\n¡Hola! Tenemos una propuesta pre-aprobada en **${c.name}** con hasta **25% de quita** o plan de cuotas fijas.\nSeleccioná una opción del menú interactivo:`;
+    appendChatBubble('bot', hsmText, '📤 Outreach Campaign HSM · WhatsApp Business API', [
+      { label: '💳 Ver oferta con descuento', msg: 'Quiero consultar mi deuda pendiente y ver qué descuento tienen' },
+      { label: '📍 Sucursal más cercana', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar?' },
+      { label: '👩‍💻 Hablar con un asesor', msg: 'Quiero hablar con un asesor humano' }
+    ]);
   });
 
   document.getElementById('chat-form').addEventListener('submit', e => {
@@ -117,14 +139,15 @@ async function initApp() {
     setTimeout(() => { msg.textContent = ''; }, 3000);
   });
 
+  document.getElementById('btn-run-portfolio').addEventListener('click', executePortfolioValidation);
   document.getElementById('btn-run-qa').addEventListener('click', executeQaSuite);
 
-  // Initial greeting
   await sendMessage('Hola');
+  await executePortfolioValidation();
   await executeQaSuite();
 }
 
-function appendChatBubble(role, text, metaText = '') {
+function appendChatBubble(role, text, metaText = '', quickButtons = []) {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
@@ -137,6 +160,20 @@ function appendChatBubble(role, text, metaText = '') {
   const body = document.createElement('div');
   body.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code>$1</code>');
   div.appendChild(body);
+
+  if (Array.isArray(quickButtons) && quickButtons.length > 0) {
+    const listWrap = document.createElement('div');
+    listWrap.className = 'wa-interactive-list';
+    quickButtons.forEach(qb => {
+      const b = document.createElement('button');
+      b.className = 'wa-row-btn';
+      b.textContent = qb.label;
+      b.addEventListener('click', () => sendMessage(qb.msg));
+      listWrap.appendChild(b);
+    });
+    div.appendChild(listWrap);
+  }
+
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
@@ -167,12 +204,31 @@ async function sendMessage(message) {
   const data = await res.json();
   sessionState = data.sessionState;
 
-  appendChatBubble('bot', data.reply, `🤖 ${data.routedTo} · intent: ${data.intent} · lang: ${data.language.toUpperCase()}`);
+  // Build WhatsApp Interactive List buttons if Turf.js returned branches
+  let interactiveButtons = [];
+  if (data.toolOutput?.whatsappInteractiveList?.rows) {
+    interactiveButtons = data.toolOutput.whatsappInteractiveList.rows.map(r => ({
+      label: `📍 ${r.title} — ${r.description}`,
+      msg: `Quiero reservar turno o pagar en ${r.title}`
+    }));
+  }
 
-  // Update badges & inspector
+  appendChatBubble(
+    'bot',
+    data.reply,
+    `🤖 ${data.routedTo} · intent: ${data.intent} · lang: ${data.language.toUpperCase()}`,
+    interactiveButtons
+  );
+
+  speakCallbotReply(data.reply, data.language);
+
   document.getElementById('chat-agent-badge').textContent = data.routedTo;
   document.getElementById('chat-lang-badge').textContent = data.language.toUpperCase();
   document.getElementById('chat-country-badge').textContent = `${sessionState.countryName} (${sessionState.currency})`;
+
+  const estTokens = Math.max(95, Math.round((message.length + data.reply.length) * 0.45));
+  const estCost = (estTokens * 0.000012).toFixed(4);
+  document.getElementById('telemetry-cost').textContent = `~${estTokens} tokens · $${estCost} USD`;
 
   const loopBadge = document.getElementById('loop-badge');
   if (sessionState.loopPrevented) {
@@ -186,6 +242,63 @@ async function sendMessage(message) {
   document.getElementById('state-json-viewer').textContent = JSON.stringify(sessionState, null, 2);
   document.getElementById('api-traces-viewer').textContent = JSON.stringify(data.apiTraces, null, 2);
   document.getElementById('prompt-viewer').textContent = data.systemPromptPreview;
+}
+
+async function executePortfolioValidation() {
+  const res = await fetch('/api/portfolio/validate', { method: 'POST' });
+  const report = await res.json();
+
+  document.getElementById('pf-total').textContent = report.totalInput;
+  document.getElementById('pf-ready').textContent = report.readyCount;
+  document.getElementById('pf-rejected').textContent = report.rejectedCount;
+  document.getElementById('pf-time').textContent = `${report.executionTimeMs} ms`;
+
+  const rejTbody = document.querySelector('#pf-rejected-table tbody');
+  rejTbody.innerHTML = '';
+  report.rejectedRecords.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${r.externalId}</strong></td>
+      <td>${r.fullName}</td>
+      <td>${r.country}</td>
+      <td><span class="badge badge-warn">${r.status}</span></td>
+      <td>${r.reason}</td>
+    `;
+    rejTbody.appendChild(tr);
+  });
+
+  const valTbody = document.querySelector('#pf-valid-table tbody');
+  valTbody.innerHTML = '';
+  report.validRecords.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${r.externalId}</strong></td>
+      <td>${r.fullName}</td>
+      <td><code>${r.e164Phone}</code></td>
+      <td><strong>${r.debtAmount} ${r.currency}</strong> (${r.daysPastDue}d)</td>
+      <td>${r.tranche}</td>
+      <td><span class="badge badge-ok">${r.maxDiscountPct}% OFF / ${r.maxInstallments}x</span></td>
+      <td><button class="btn-primary btn-small" data-client-country="${r.country}" data-client-name="${r.fullName}" data-client-discount="${r.maxDiscountPct}">📲 Contactar en Simulador</button></td>
+    `;
+    tr.querySelector('button').addEventListener('click', () => {
+      document.getElementById('sim-country').value = r.country;
+      document.getElementById('sim-country').dispatchEvent(new Event('change'));
+      sessionState = {
+        language: r.language.toLowerCase(),
+        countryCode: r.country,
+        customerName: r.fullName,
+        customerPhoneE164: r.e164Phone,
+        tranche: r.tranche,
+        activeAgent: 'CollectionsNegotiationAgent',
+        handoffHopCount: 0
+      };
+      // Switch to Simulator tab and launch message
+      document.querySelector('.tab-btn[data-tab="simulator"]').click();
+      document.getElementById('chat-messages').innerHTML = '';
+      sendMessage(r.language === 'PT' ? `Olá, sou ${r.fullName}, quero consultar minha fatura` : `Hola, soy ${r.fullName}, quiero consultar las opciones de pago de mi deuda`);
+    });
+    valTbody.appendChild(tr);
+  });
 }
 
 async function executeQaSuite() {

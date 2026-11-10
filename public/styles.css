@@ -172,6 +172,29 @@ input, select, textarea {
   font-size: 13px;
 }
 
+.voice-toggle-box {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.checkbox-inline input {
+  width: auto;
+  margin-top: 0;
+}
+
 .coords-box {
   background: rgba(15, 23, 42, 0.7);
   padding: 8px 10px;
@@ -222,6 +245,11 @@ hr {
   background: #1f2d47;
 }
 
+.hsm-btn {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
 .btn-primary {
   background: var(--accent-strong);
   color: #fff;
@@ -235,6 +263,12 @@ hr {
 
 .btn-primary:hover {
   background: #0369a1;
+}
+
+.btn-small {
+  padding: 5px 10px;
+  font-size: 11.5px;
+  border-radius: 6px;
 }
 
 .btn-secondary {
@@ -251,7 +285,7 @@ hr {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  height: 670px;
+  height: 690px;
   padding: 0;
   overflow: hidden;
 }
@@ -264,6 +298,12 @@ hr {
   background: #0f1625;
   border-bottom: 1px solid var(--panel-border);
   font-size: 13px;
+}
+
+.telemetry-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .badge {
@@ -304,7 +344,7 @@ hr {
 }
 
 .msg {
-  max-width: 82%;
+  max-width: 84%;
   padding: 10px 13px;
   border-radius: 12px;
   font-size: 13.5px;
@@ -329,6 +369,30 @@ hr {
   font-size: 11px;
   color: var(--muted);
   margin-bottom: 4px;
+}
+
+.wa-interactive-list {
+  margin-top: 8px;
+  border-top: 1px solid #334155;
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.wa-row-btn {
+  background: #0f172a;
+  color: var(--accent);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wa-row-btn:hover {
+  border-color: var(--accent);
 }
 
 .chat-input-bar {
@@ -364,7 +428,7 @@ hr {
   font-family: Consolas, 'Courier New', monospace;
   font-size: 11.5px;
   color: #93c5fd;
-  max-height: 175px;
+  max-height: 180px;
   overflow: auto;
   white-space: pre-wrap;
 }
@@ -429,6 +493,48 @@ hr {
 
 .text-green {
   color: var(--green);
+}
+
+.text-amber {
+  color: var(--amber);
+}
+
+.funnel-card {
+  margin-bottom: 14px;
+}
+
+.funnel-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.funnel-row {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.funnel-track {
+  background: #080c14;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+}
+
+.funnel-fill {
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+
+.funnel-fill.fill-green {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
 }
 
 .table-wrap {

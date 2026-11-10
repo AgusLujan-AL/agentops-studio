@@ -11,8 +11,8 @@
     <div class="brand">
       <span class="logo-badge">AI</span>
       <div>
-        <h1>AgentOps Studio <span class="tag">v1.0 · LatAm Production Engine</span></h1>
-        <p class="subtitle">Multi-Country Conversational Router (13 Países) · Turf.js Zero-Cost Geo · 30-Case QA Evals Suite</p>
+        <h1>AgentOps Studio <span class="tag">v2.0 · LatAm Production Engine</span></h1>
+        <p class="subtitle">Multi-Country Router (13 Países) · Callbot Voice TTS · Turf.js Zero-Cost Geo · Portfolio Ingestion · 30-Case QA Suite</p>
       </div>
     </div>
     <div class="author-pill">
@@ -22,9 +22,10 @@
   </header>
 
   <nav class="tabs-bar">
-    <button class="tab-btn active" data-tab="simulator">💬 1. Simulador Multi-Agente & Estado en Vivo</button>
-    <button class="tab-btn" data-tab="onboarding">⚙️ 2. Onboarding de Cliente & Prompt Rules</button>
-    <button class="tab-btn" data-tab="qa">🧪 3. Suite de QA Pre-Producción (30 Casos & Funnel)</button>
+    <button class="tab-btn active" data-tab="simulator">💬 1. Simulador Callbot/WhatsApp & Estado en Vivo</button>
+    <button class="tab-btn" data-tab="portfolio">📂 2. Ingesta & Limpieza de Cartera (E.164 / DNC)</button>
+    <button class="tab-btn" data-tab="onboarding">⚙️ 3. Configuración dePrompts & 13 Países</button>
+    <button class="tab-btn" data-tab="qa">🧪 4. Suite de 30 Casos de QA & Funnel de Conversión</button>
   </nav>
 
   <main class="container">
@@ -49,6 +50,13 @@
             <input type="range" id="sim-hour" min="0" max="23" value="14" />
           </label>
 
+          <div class="voice-toggle-box">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="sim-voice-tts" />
+              <span>🔊 Activar Voz de Callbot (TTS Español / Portugués)</span>
+            </label>
+          </div>
+
           <div class="coords-box">
             <span class="coords-title">📍 Coordenadas GPS (Turf.js Code Action)</span>
             <div class="coords-inputs">
@@ -60,6 +68,9 @@
           <hr />
           <h4>⚡ Escenarios de Prueba en 1 Clic (Para Demo Loom)</h4>
           <div class="scenario-buttons">
+            <button id="btn-send-hsm" class="scenario-btn hsm-btn">
+              📲 0. Disparar Plantilla HSM Saliente (Outreach Ventana 24h)
+            </button>
             <button class="scenario-btn" data-msg="Quiero consultar mi deuda pendiente y ver qué descuento tienen">
               💳 1. Consultar deuda + opciones de descuento (API GET)
             </button>
@@ -90,7 +101,10 @@
               <span id="chat-lang-badge" class="badge">ES</span>
               <span id="chat-country-badge" class="badge">Argentina (ARS)</span>
             </div>
-            <span class="status-dot">● En Producción</span>
+            <div class="telemetry-pills">
+              <span id="telemetry-cost" class="badge badge-ok">Costo Turno: $0.0018 USD</span>
+              <span class="status-dot">● En Producción</span>
+            </div>
           </div>
 
           <div id="chat-messages" class="chat-messages"></div>
@@ -130,7 +144,77 @@
       </div>
     </section>
 
-    <!-- TAB 2: ONBOARDING DE CLIENTE -->
+    <!-- TAB 2: INGESTA Y LIMPIEZA DE CARTERA -->
+    <section id="tab-portfolio" class="tab-panel">
+      <div class="qa-header-card card">
+        <div>
+          <h3>📂 Ingesta, Normalización E.164 y Limpieza de Cartera (Onboarding de Clientes)</h3>
+          <p class="muted">Valida lotes crudos por API/CSV antes de activar campañas: formatea teléfonos a E.164, filtra inscritos en Registro No Llame (DNC), elimina duplicados y asigna estrategia por tramo de mora.</p>
+        </div>
+        <button id="btn-run-portfolio" class="btn-primary btn-large">⚡ Validar & Limpiar Lote de Cartera</button>
+      </div>
+
+      <div class="qa-metrics-grid">
+        <div class="card metric-card">
+          <span class="metric-label">Registros Recibidos (Raw Batch)</span>
+          <strong id="pf-total" class="metric-value">8</strong>
+        </div>
+        <div class="card metric-card">
+          <span class="metric-label">Habilitados y Normalizados (E.164)</span>
+          <strong id="pf-ready" class="metric-value text-green">5</strong>
+        </div>
+        <div class="card metric-card">
+          <span class="metric-label">Bloqueados (DNC / Duplicados / Error)</span>
+          <strong id="pf-rejected" class="metric-value text-amber">3</strong>
+        </div>
+        <div class="card metric-card">
+          <span class="metric-label">Tiempo de Sanitización</span>
+          <strong id="pf-time" class="metric-value">-- ms</strong>
+        </div>
+      </div>
+
+      <div class="onboarding-grid">
+        <div class="card">
+          <h4>🚫 Registros Descartados / Bloqueados por Compliance</h4>
+          <div class="table-wrap">
+            <table id="pf-rejected-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente</th>
+                  <th>País</th>
+                  <th>Estado</th>
+                  <th>Motivo de Rechazo</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4>✅ Cartera Limpia Lista para Campaña (Click en "Contactar" para abrir en el Simulador)</h4>
+          <div class="table-wrap">
+            <table id="pf-valid-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cliente</th>
+                  <th>Teléfono E.164</th>
+                  <th>Deuda</th>
+                  <th>Tramo de Mora</th>
+                  <th>Quita Máx</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ONBOARDING DE CLIENTE -->
     <section id="tab-onboarding" class="tab-panel">
       <div class="onboarding-grid">
         <div class="card">
@@ -184,11 +268,11 @@
       </div>
     </section>
 
-    <!-- TAB 3: SUITE DE 30 CASOS DE QA -->
+    <!-- TAB 4: SUITE DE 30 CASOS DE QA & FUNNEL -->
     <section id="tab-qa" class="tab-panel">
       <div class="qa-header-card card">
         <div>
-          <h3>🧪 Batería Automatizada de 30 Casos de QA Pre-Producción</h3>
+          <h3>🧪 Batería Automatizada de 30 Casos de QA Pre-Producción & Funnel Conversacional</h3>
           <p class="muted">Ningún cambio de prompt, regla de negocio o ruteo sale a producción sin aprobar los 30 escenarios críticos.</p>
         </div>
         <button id="btn-run-qa" class="btn-primary btn-large">▶️ Ejecutar 30 Casos de QA Ahora</button>
@@ -197,7 +281,7 @@
       <div id="qa-summary-grid" class="qa-metrics-grid">
         <div class="card metric-card">
           <span class="metric-label">Casos Ejecutados</span>
-          <strong id="qa-total" class="metric-value">30</strong>
+          <strong id="qa-total" class="metric-value">30 / 30</strong>
         </div>
         <div class="card metric-card">
           <span class="metric-label">Tasa de Aprobación (Pass Rate)</span>
@@ -213,8 +297,31 @@
         </div>
       </div>
 
+      <!-- Funnel Visual de Marcha Blanca -->
+      <div class="card funnel-card">
+        <h4>📈 Análisis de Funnel Conversacional & Detección de Fricción (Marcha Blanca)</h4>
+        <div class="funnel-bars">
+          <div class="funnel-row">
+            <span class="funnel-stage">1. Contactados (Outreach HSM / Callbot)</span>
+            <div class="funnel-track"><div class="funnel-fill" style="width: 100%">1.250 (100%)</div></div>
+          </div>
+          <div class="funnel-row">
+            <span class="funnel-stage">2. Conversación Activa (Identidad Validada)</span>
+            <div class="funnel-track"><div class="funnel-fill" style="width: 75.2%">940 (75.2%)</div></div>
+          </div>
+          <div class="funnel-row">
+            <span class="funnel-stage">3. Autogestionados por el Agente IA (Sin Humano)</span>
+            <div class="funnel-track"><div class="funnel-fill" style="width: 62.8%">785 (62.8%)</div></div>
+          </div>
+          <div class="funnel-row">
+            <span class="funnel-stage">4. Promesa de Pago Confirmada (API POST 201)</span>
+            <div class="funnel-track"><div class="funnel-fill fill-green" style="width: 33%">412 Acuerdos (33.0% conversión total)</div></div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
-        <h4>📊 Funnel Conversacional & Resultados de la Batería (30/30)</h4>
+        <h4>📋 Resultados Detallados de la Batería (30/30)</h4>
         <div class="table-wrap">
           <table id="qa-results-table">
             <thead>
