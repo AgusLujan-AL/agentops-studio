@@ -41,10 +41,10 @@ app.put('/api/config/client', (req, res) => {
   res.json({ ok: true, clientPreset: updated });
 });
 
-// 3. Actualizar ventana horaria de un país (13 países)
+// 3. Actualizar ventana horaria y tasa FX de un país (13 países)
 app.put('/api/config/country', (req, res) => {
-  const { countryCode, windowStart, windowEnd } = req.body || {};
-  const updated = updateCountryWindow(countryCode, windowStart, windowEnd);
+  const { countryCode, windowStart, windowEnd, fxPerUsd } = req.body || {};
+  const updated = updateCountryWindow(countryCode, windowStart, windowEnd, fxPerUsd);
   if (!updated) return res.status(404).json({ ok: false, error: 'Country not found' });
   res.json({ ok: true, country: updated });
 });

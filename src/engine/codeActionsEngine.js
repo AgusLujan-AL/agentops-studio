@@ -18,13 +18,18 @@ const deuda = Number(state.debtAmount || 185000);
 const quitaPct = Number(state.maxDiscountPct || client.maxDiscountPct || 25);
 const maxCuotas = Number(state.maxInstallments || client.maxInstallments || 6);
 
-// 1. Calcular importe con quita y valor de cuota fija
+// 1. Calcular importe con quita, valor de cuota fija y equivalencia FX en USD
+const fxRate = Number(country.fxPerUsd || state.fxPerUsd || 1050);
+const deudaUsd = Number((deuda / fxRate).toFixed(2));
 const montoConQuita = Math.round(deuda * (1 - quitaPct / 100));
+const montoConQuitaUsd = Number((montoConQuita / fxRate).toFixed(2));
 const ahorroNeto = deuda - montoConQuita;
 const valorCuota = Math.round(deuda / maxCuotas);
 
 // 2. Persistir variables en la sesión del agente (Memory State)
+state.debtAmountUsd = deudaUsd;
 state.calculatedPayoff = montoConQuita;
+state.calculatedPayoffUsd = montoConQuitaUsd;
 state.calculatedSavings = ahorroNeto;
 state.calculatedInstallment = valorCuota;
 state.paymentLinkUrl = \`https://pagos.agentops.latam/\${state.countryCode || 'AR'}/\${Date.now().toString().slice(-6)}\`;
@@ -32,20 +37,24 @@ state.paymentLinkUrl = \`https://pagos.agentops.latam/\${state.countryCode || 'A
 // 3. Registrar llamada a API externa en el inspector de telemetría
 api.trace('POST', '/api/v1/collections/quote-engine', 200, {
   debtAmount: deuda,
+  debtAmountUsd: deudaUsd,
   discountPct: quitaPct,
   discountedPayoff: montoConQuita,
+  discountedPayoffUsd: montoConQuitaUsd,
   installmentAmount: valorCuota,
-  currency: country.currency
+  currency: country.currency,
+  fxRatePerUsd: fxRate
 });
 
-api.log(\`Cotización calculada para \${state.customerName}: Quita \${quitaPct}% -> \${montoConQuita} \${country.currency}\`);
+api.log(\`Cotización calculada para \${state.customerName}: Quita \${quitaPct}% -> \${montoConQuita} \${country.currency} (~US$ \${montoConQuitaUsd})\`);
 
 return {
   discountedPayoff: montoConQuita,
+  discountedPayoffUsd: montoConQuitaUsd,
   savings: ahorroNeto,
   installmentAmount: valorCuota,
   paymentLink: state.paymentLinkUrl,
-  summaryText: \`Ahorro neto calculado por Code Action: \${ahorroNeto.toLocaleString()} \${country.currency}\`
+  summaryText: \`Ahorro: \${ahorroNeto.toLocaleString()} \${country.currency} · Equivalente a US$ \${montoConQuitaUsd} (TC: \${fxRate} \${country.currency}/USD)\`
 };`
   },
 

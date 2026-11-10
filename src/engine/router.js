@@ -1,33 +1,34 @@
 /**
- * Módulo 1: Ruteador Multi-País (13 países LatAm) y Multilingüe (ES / PT)
- * Incluye sanitización explícita de variables de sesión para prevenir loops infinitos
- * durante derivaciones (handoffs) entre sub-agentes al cambiar de idioma o país,
- * más lectura en vivo de nodos creados/editados en el Agent Flow Builder.
+ * Módulo 1: Ruteador Multi-País (13 países LatAm), Multilingüe (ES / PT),
+ * Husos Horarios en Tiempo Real y Tasas de Conversión Multimoneda (FX a USD).
  */
 import { AGENT_FLOW_NODES } from './codeActionsEngine.js';
 
 export const COUNTRIES_CONFIG = {
-  AR: { name: 'Argentina', lang: 'es', tz: 'UTC-3', tzOffset: -3, currency: 'ARS', currencySymbol: '$', defaultDebt: 185000, windowStart: 8, windowEnd: 20, dncRegistry: 'Registro Nacional No Llame (Ley 26.951)', regulation: 'Ley 26.951 No Llame' },
-  BR: { name: 'Brasil', lang: 'pt', tz: 'UTC-3', tzOffset: -3, currency: 'BRL', currencySymbol: 'R$', defaultDebt: 1450, windowStart: 8, windowEnd: 20, dncRegistry: 'Não Me Perturbe (ANATEL / PROCON)', regulation: 'ANATEL / CDC Art. 42' },
-  MX: { name: 'México', lang: 'es', tz: 'UTC-6', tzOffset: -6, currency: 'MXN', currencySymbol: '$', defaultDebt: 5200, windowStart: 8, windowEnd: 21, dncRegistry: 'REUS / REDECO (CONDUSEF)', regulation: 'CONDUSEF REDECO' },
-  CL: { name: 'Chile', lang: 'es', tz: 'UTC-4', tzOffset: -4, currency: 'CLP', currencySymbol: '$', defaultDebt: 240000, windowStart: 8, windowEnd: 20, dncRegistry: 'No Molestar (SERNAC Ley 21.398)', regulation: 'SERNAC Ley 21.398' },
-  CO: { name: 'Colombia', lang: 'es', tz: 'UTC-5', tzOffset: -5, currency: 'COP', currencySymbol: '$', defaultDebt: 980000, windowStart: 7, windowEnd: 19, dncRegistry: 'Ley 2300 ("Dejen de Fregar")', regulation: 'Ley 2300 Art. 3' },
-  PE: { name: 'Perú', lang: 'es', tz: 'UTC-5', tzOffset: -5, currency: 'PEN', currencySymbol: 'S/', defaultDebt: 950, windowStart: 8, windowEnd: 20, dncRegistry: 'Gracias No Insista (INDECOPI)', regulation: 'INDECOPI Código Consumo' },
-  UY: { name: 'Uruguay', lang: 'es', tz: 'UTC-3', tzOffset: -3, currency: 'UYU', currencySymbol: '$U', defaultDebt: 11200, windowStart: 9, windowEnd: 20, dncRegistry: 'Registro No Llame (URSEC Ley 19.996)', regulation: 'URSEC Ley 19.996' },
-  PY: { name: 'Paraguay', lang: 'es', tz: 'UTC-4', tzOffset: -4, currency: 'PYG', currencySymbol: '₲', defaultDebt: 1850000, windowStart: 8, windowEnd: 20, dncRegistry: 'Registro SEDECO', regulation: 'SEDECO Res. 1020' },
-  BO: { name: 'Bolivia', lang: 'es', tz: 'UTC-4', tzOffset: -4, currency: 'BOB', currencySymbol: 'Bs', defaultDebt: 1900, windowStart: 8, windowEnd: 20, dncRegistry: 'Reglamento ASFI Cobranzas', regulation: 'ASFI Recopilación Cap. IV' },
-  EC: { name: 'Ecuador', lang: 'es', tz: 'UTC-5', tzOffset: -5, currency: 'USD', currencySymbol: 'US$', defaultDebt: 320, windowStart: 8, windowEnd: 20, dncRegistry: 'LOPDP / Superintendencia de Bancos', regulation: 'Superbancos Norma Cobranza' },
-  CR: { name: 'Costa Rica', lang: 'es', tz: 'UTC-6', tzOffset: -6, currency: 'CRC', currencySymbol: '₡', defaultDebt: 145000, windowStart: 8, windowEnd: 19, dncRegistry: 'Directriz MEIC / PRODHAB', regulation: 'MEIC / PRODHAB Art. 14' },
-  PA: { name: 'Panamá', lang: 'es', tz: 'UTC-5', tzOffset: -5, currency: 'USD', currencySymbol: 'B/.', defaultDebt: 280, windowStart: 8, windowEnd: 20, dncRegistry: 'Normativa ACODECO / SBP', regulation: 'SBP Acuerdo Bancario' },
-  GT: { name: 'Guatemala', lang: 'es', tz: 'UTC-6', tzOffset: -6, currency: 'GTQ', currencySymbol: 'Q', defaultDebt: 2100, windowStart: 8, windowEnd: 20, dncRegistry: 'Normativa DIACO / SIB', regulation: 'DIACO / Decreto 06-2003' }
+  AR: { name: 'Argentina', capital: 'Buenos Aires', lang: 'es', tz: 'UTC-3', ianaTz: 'America/Argentina/Buenos_Aires', tzOffset: -3, currency: 'ARS', currencySymbol: '$', fxPerUsd: 1050, defaultDebt: 185000, windowStart: 8, windowEnd: 20, dncRegistry: 'Registro Nacional No Llame (Ley 26.951)', regulation: 'Ley 26.951 No Llame' },
+  BR: { name: 'Brasil', capital: 'São Paulo', lang: 'pt', tz: 'UTC-3', ianaTz: 'America/Sao_Paulo', tzOffset: -3, currency: 'BRL', currencySymbol: 'R$', fxPerUsd: 5.75, defaultDebt: 1450, windowStart: 8, windowEnd: 20, dncRegistry: 'Não Me Perturbe (ANATEL / PROCON)', regulation: 'ANATEL / CDC Art. 42' },
+  MX: { name: 'México', capital: 'Ciudad de México', lang: 'es', tz: 'UTC-6', ianaTz: 'America/Mexico_City', tzOffset: -6, currency: 'MXN', currencySymbol: '$', fxPerUsd: 20.1, defaultDebt: 5200, windowStart: 8, windowEnd: 21, dncRegistry: 'REUS / REDECO (CONDUSEF)', regulation: 'CONDUSEF REDECO' },
+  CL: { name: 'Chile', capital: 'Santiago', lang: 'es', tz: 'UTC-4', ianaTz: 'America/Santiago', tzOffset: -4, currency: 'CLP', currencySymbol: '$', fxPerUsd: 965, defaultDebt: 240000, windowStart: 8, windowEnd: 20, dncRegistry: 'No Molestar (SERNAC Ley 21.398)', regulation: 'SERNAC Ley 21.398' },
+  CO: { name: 'Colombia', capital: 'Bogotá', lang: 'es', tz: 'UTC-5', ianaTz: 'America/Bogota', tzOffset: -5, currency: 'COP', currencySymbol: '$', fxPerUsd: 4350, defaultDebt: 980000, windowStart: 7, windowEnd: 19, dncRegistry: 'Ley 2300 ("Dejen de Fregar")', regulation: 'Ley 2300 Art. 3' },
+  PE: { name: 'Perú', capital: 'Lima', lang: 'es', tz: 'UTC-5', ianaTz: 'America/Lima', tzOffset: -5, currency: 'PEN', currencySymbol: 'S/', fxPerUsd: 3.76, defaultDebt: 950, windowStart: 8, windowEnd: 20, dncRegistry: 'Gracias No Insista (INDECOPI)', regulation: 'INDECOPI Código Consumo' },
+  UY: { name: 'Uruguay', capital: 'Montevideo', lang: 'es', tz: 'UTC-3', ianaTz: 'America/Montevideo', tzOffset: -3, currency: 'UYU', currencySymbol: '$U', fxPerUsd: 42.5, defaultDebt: 11200, windowStart: 9, windowEnd: 20, dncRegistry: 'Registro No Llame (URSEC Ley 19.996)', regulation: 'URSEC Ley 19.996' },
+  PY: { name: 'Paraguay', capital: 'Asunción', lang: 'es', tz: 'UTC-4', ianaTz: 'America/Asuncion', tzOffset: -4, currency: 'PYG', currencySymbol: '₲', fxPerUsd: 7800, defaultDebt: 1850000, windowStart: 8, windowEnd: 20, dncRegistry: 'Registro SEDECO', regulation: 'SEDECO Res. 1020' },
+  BO: { name: 'Bolivia', capital: 'La Paz', lang: 'es', tz: 'UTC-4', ianaTz: 'America/La_Paz', tzOffset: -4, currency: 'BOB', currencySymbol: 'Bs', fxPerUsd: 6.91, defaultDebt: 1900, windowStart: 8, windowEnd: 20, dncRegistry: 'Reglamento ASFI Cobranzas', regulation: 'ASFI Recopilación Cap. IV' },
+  EC: { name: 'Ecuador', capital: 'Quito', lang: 'es', tz: 'UTC-5', ianaTz: 'America/Guayaquil', tzOffset: -5, currency: 'USD', currencySymbol: 'US$', fxPerUsd: 1.0, defaultDebt: 320, windowStart: 8, windowEnd: 20, dncRegistry: 'LOPDP / Superintendencia de Bancos', regulation: 'Superbancos Norma Cobranza' },
+  CR: { name: 'Costa Rica', capital: 'San José', lang: 'es', tz: 'UTC-6', ianaTz: 'America/Costa_Rica', tzOffset: -6, currency: 'CRC', currencySymbol: '₡', fxPerUsd: 512, defaultDebt: 145000, windowStart: 8, windowEnd: 19, dncRegistry: 'Directriz MEIC / PRODHAB', regulation: 'MEIC / PRODHAB Art. 14' },
+  PA: { name: 'Panamá', capital: 'Ciudad de Panamá', lang: 'es', tz: 'UTC-5', ianaTz: 'America/Panama', tzOffset: -5, currency: 'USD', currencySymbol: 'B/.', fxPerUsd: 1.0, defaultDebt: 280, windowStart: 8, windowEnd: 20, dncRegistry: 'Normativa ACODECO / SBP', regulation: 'SBP Acuerdo Bancario' },
+  GT: { name: 'Guatemala', capital: 'Ciudad de Guatemala', lang: 'es', tz: 'UTC-6', ianaTz: 'America/Guatemala', tzOffset: -6, currency: 'GTQ', currencySymbol: 'Q', fxPerUsd: 7.73, defaultDebt: 2100, windowStart: 8, windowEnd: 20, dncRegistry: 'Normativa DIACO / SIB', regulation: 'DIACO / Decreto 06-2003' }
 };
 
 const MAX_HANDOFF_HOPS = 3;
 
-export function updateCountryWindow(countryCode, windowStart, windowEnd) {
+export function updateCountryWindow(countryCode, windowStart, windowEnd, fxPerUsd) {
   if (!COUNTRIES_CONFIG[countryCode]) return null;
-  COUNTRIES_CONFIG[countryCode].windowStart = Number(windowStart);
-  COUNTRIES_CONFIG[countryCode].windowEnd = Number(windowEnd);
+  if (windowStart !== undefined) COUNTRIES_CONFIG[countryCode].windowStart = Number(windowStart);
+  if (windowEnd !== undefined) COUNTRIES_CONFIG[countryCode].windowEnd = Number(windowEnd);
+  if (fxPerUsd !== undefined && Number(fxPerUsd) > 0) {
+    COUNTRIES_CONFIG[countryCode].fxPerUsd = Number(fxPerUsd);
+  }
   return COUNTRIES_CONFIG[countryCode];
 }
 
@@ -123,12 +124,10 @@ export function routeConversation({ countryCode = 'AR', message = '', sessionSta
 
   const defaultGuardrailPattern = /\b(ignore previous|olvida tus instrucciones|system prompt|hack|modo dios|act as|jailbreak|bypass)\b/i;
 
-  // 1. Guardrail tiene prioridad máxima
   if (defaultGuardrailPattern.test(msg) || (customGuardrailRegex && customGuardrailRegex.test(msg)) || matchesNodeKeywords(msg, 'GuardrailSecurityAgent')) {
     targetAgent = 'GuardrailSecurityAgent';
     intent = 'prompt_injection_blocked';
   } else {
-    // 2. Verificar primero sub-agentes personalizados creados por el usuario o ReceiptValidationAgent
     const customOrSpecialNodes = Object.values(AGENT_FLOW_NODES).filter(
       n => n.isCustom || n.id === 'ReceiptValidationAgent'
     );
@@ -159,6 +158,7 @@ export function routeConversation({ countryCode = 'AR', message = '', sessionSta
     countryCode,
     countryName: country.name,
     currency: country.currency,
+    fxPerUsd: country.fxPerUsd,
     language: effectiveLang,
     pendingLanguageSwitch: langCheck.switched,
     pendingCountryRedirect: Boolean(sessionState.countryCode && sessionState.countryCode !== countryCode)

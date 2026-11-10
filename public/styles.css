@@ -1568,3 +1568,219 @@ input:focus, select:focus, textarea:focus {
   color: #34d399;
   background: #06070a;
 }
+
+
+/* ========================================================================= */
+/* MODO CLARO (LIGHT THEME) & BOTONES DE UTILIDAD SUPERIOR                   */
+/* ========================================================================= */
+body.light-theme {
+  --bg-canvas: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f8fafc;
+  --bg-subtle: #e2e8f0;
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-default: rgba(15, 23, 42, 0.14);
+  --border-strong: rgba(15, 23, 42, 0.24);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  background-image: radial-gradient(circle at 50% -10%, rgba(37, 99, 235, 0.06), transparent 55%);
+}
+
+body.light-theme .app-topbar {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+body.light-theme .nav-drawer,
+body.light-theme .fx-clock-drawer {
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+}
+
+body.light-theme .precision-table th {
+  background: #f8fafc;
+  color: #475569;
+}
+
+body.light-theme .code-viewer-pre {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+body.light-theme .prompt-pre {
+  color: #1d4ed8;
+}
+
+body.light-theme .js-code-textarea {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+body.light-theme .code-signature-bar {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+body.light-theme .compact-console-pre {
+  background: #0f172a;
+  color: #34d399;
+}
+
+body.light-theme .pill-emerald { color: #059669; }
+body.light-theme .pill-amber { color: #d97706; }
+body.light-theme .pill-rose { color: #e11d48; }
+body.light-theme .pill-indigo { color: #2563eb; }
+body.light-theme .wa-row-btn { color: #1d4ed8; }
+body.light-theme .wa-row-btn:hover { color: #fff; background: #2563eb; }
+
+.utility-top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.utility-top-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ========================================================================= */
+/* DRAWER DERECHO: RELOJES DE 13 PAÍSES & CONVERTIDOR MULTIMONEDA FX         */
+/* ========================================================================= */
+.fx-clock-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 660px;
+  max-width: 94vw;
+  background: #0b0d12;
+  border-left: 1px solid var(--border-default);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(102%);
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fx-clock-drawer.open {
+  transform: translateX(0);
+}
+
+.fx-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fx-result-banner {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fx-result-label {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.fx-converted-value {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--emerald);
+}
+
+.fx-result-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.live-clocks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.clock-country-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.clock-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.clock-time-big {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.clock-card-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.clock-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+
+.sim-live-country-box {
+  background: var(--accent-soft);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.fx-input-inline {
+  width: 72px !important;
+  padding: 3px 6px !important;
+  font-family: var(--font-mono) !important;
+  text-align: right;
+}

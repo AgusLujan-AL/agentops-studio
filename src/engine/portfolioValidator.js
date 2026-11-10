@@ -177,12 +177,16 @@ export function validateAndSanitizePortfolio(input = SAMPLE_RAW_PORTFOLIO, custo
     seenPhones.add(phoneCheck.e164);
     const trancheInfo = classifyDebtTranche(row.daysPastDue, customTranches);
 
+    const debtAmountUsd = Number((row.debtAmount / (country.fxPerUsd || 1)).toFixed(2));
+
     validRecords.push({
       externalId: row.externalId,
       fullName: row.fullName,
       country: countryCode,
       countryName: country.name,
       currency: country.currency,
+      fxPerUsd: country.fxPerUsd,
+      debtAmountUsd,
       language: country.lang.toUpperCase(),
       rawPhone: row.rawPhone,
       e164Phone: phoneCheck.e164,
@@ -193,12 +197,17 @@ export function validateAndSanitizePortfolio(input = SAMPLE_RAW_PORTFOLIO, custo
     });
   }
 
+  const totalPortfolioUsd = Number(
+    validRecords.reduce((acc, r) => acc + (r.debtAmountUsd || 0), 0).toFixed(2)
+  );
+
   return {
     processedAt: new Date().toISOString(),
     executionTimeMs: Number((performance.now() - startTime).toFixed(2)),
     totalInput: records.length,
     readyCount: validRecords.length,
     rejectedCount: rejectedRecords.length,
+    totalPortfolioUsd,
     validRecords,
     rejectedRecords
   };

@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AgentOps Studio — Consola de Implementación, Flujo de Agentes &amp; QA</title>
+  <title>AgentOps Studio — Consola de Implementación, Flujo de Agentes, FX &amp; QA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- OVERLAY & DRAWER DEL MENÚ HAMBURGUESA -->
+  <!-- OVERLAY COMPARTIDO PARA DRAWERS -->
   <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+  <!-- DRAWER IZQUIERDO: MENÚ HAMBURGUESA DE LAS 5 ETAPAS -->
   <aside id="nav-drawer" class="nav-drawer" aria-label="Menú de Navegación">
     <div class="drawer-header">
       <div class="brand-lockup">
@@ -36,7 +38,7 @@
 
     <div class="drawer-mission">
       <div class="drawer-mission-label">PIPELINE DE IMPLEMENTACIÓN (5 ETAPAS)</div>
-      <p>Plataforma de ingeniería para configurar reglas bancarias, programar sub-agentes y acciones de código JS, sanitizar padrones E.164, simular con Turf.js y certificar QA.</p>
+      <p>Plataforma de ingeniería para configurar reglas bancarias, programar sub-agentes y acciones de código JS, sanitizar padrones E.164 con conversión FX, simular con Turf.js y certificar QA.</p>
     </div>
 
     <nav class="drawer-nav-list">
@@ -44,10 +46,10 @@
         <span class="drawer-step-num">01</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
-            Reglas &amp; Compliance Regional
+            Reglas, Relojes &amp; Divisas FX
             <span class="drawer-badge">13 Países</span>
           </div>
-          <p>Políticas de quita, cuotas y ventanas horarias legales por jurisdicción.</p>
+          <p>Políticas de quita, husos horarios en vivo, convertidor multimoneda y ventanas legales.</p>
         </div>
       </a>
 
@@ -66,10 +68,10 @@
         <span class="drawer-step-num">03</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
-            Ingesta &amp; Limpieza de Padrón
+            Ingesta E.164 &amp; Valuación USD
             <span id="nav-pf-badge" class="drawer-badge">8 Listos</span>
           </div>
-          <p>Normalización telefónica E.164, bloqueo DNC (No Llame) y segmentación por mora.</p>
+          <p>Normalización telefónica E.164, bloqueo DNC, conversión a USD y segmentación por mora.</p>
         </div>
       </a>
 
@@ -120,14 +122,78 @@
 
     <div class="drawer-footer">
       <span>Desarrollado por <strong>Agustín Luján</strong></span>
-      <span class="pill-mono">v3.5</span>
+      <span class="pill-mono">v4.0</span>
+    </div>
+  </aside>
+
+  <!-- DRAWER DERECHO: CENTRO REGIONAL DE RELOJES EN TIEMPO REAL & CONVERTIDOR FX -->
+  <aside id="fx-clock-drawer" class="fx-clock-drawer" aria-label="Relojes y Convertidor de Moneda">
+    <div class="drawer-header">
+      <div>
+        <span class="eyebrow-tag">OPERACIONES LATAM EN TIEMPO REAL</span>
+        <div class="brand-name">Convertidor Multimoneda &amp; Husos Horarios</div>
+      </div>
+      <button id="btn-close-fx-drawer" class="icon-btn" title="Cerrar panel (Esc)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fx-drawer-content">
+      <!-- Convertidor Multimoneda Interactivo -->
+      <div class="subcard-block">
+        <div class="label-row-between">
+          <span class="subcard-title">Calculadora de Divisas (13 Países ↔ USD)</span>
+          <span class="pill-mono">Tasas Editables</span>
+        </div>
+
+        <div class="field-row-3">
+          <div class="field-group">
+            <label for="fx-amount">Monto a Convertir</label>
+            <input type="number" id="fx-amount" value="185000" min="0" step="any" />
+          </div>
+          <div class="field-group">
+            <label for="fx-from">Moneda Origen</label>
+            <select id="fx-from"></select>
+          </div>
+          <div class="field-group">
+            <label for="fx-to">Moneda Destino</label>
+            <select id="fx-to"></select>
+          </div>
+        </div>
+
+        <div class="fx-result-banner">
+          <div>
+            <span class="fx-result-label">Resultado de Conversión</span>
+            <strong id="fx-converted-main" class="fx-converted-value">US$ 176.19</strong>
+          </div>
+          <div class="fx-result-right">
+            <span id="fx-rate-detail" class="pill-mono">1 USD = 1050 ARS</span>
+            <button type="button" id="btn-apply-fx-to-sim" class="btn-primary-action btn-xs">
+              Cargar Monto en Sandbox ↗
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grilla de Relojes en Vivo de los 13 Países -->
+      <div class="subcard-block">
+        <div class="label-row-between">
+          <span class="subcard-title">Hora Actual de los Clientes por País (13 Jurisdicciones)</span>
+          <span class="status-pill pill-emerald">Sincronizado UTC</span>
+        </div>
+        <p class="card-helper">Verificá qué hora es en este instante en cada país, si la ventana legal permite llamadas salientes y cuando equivale el monto ingresado en su moneda local.</p>
+
+        <div id="live-clocks-grid" class="live-clocks-grid"></div>
+      </div>
     </div>
   </aside>
 
   <!-- BARRA SUPERIOR SLIM (52px) -->
   <header class="app-topbar">
     <div class="topbar-left">
-      <button id="btn-open-drawer" class="hamburger-trigger" title="Abrir menú de páginas (Tecla M)">
+      <button id="btn-open-drawer" class="hamburger-trigger" title="Abrir menú de etapas (Tecla M)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -141,15 +207,40 @@
       <div class="active-page-crumb">
         <span id="crumb-step" class="crumb-step-pill">ETAPA 02 / 05</span>
         <h1 id="crumb-title" class="crumb-page-title">Flujo de Creación de Agentes &amp; Acciones de Código JS</h1>
-        <span id="crumb-desc" class="crumb-page-desc">Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript que modifican al bot en vivo.</span>
+        <span id="crumb-desc" class="crumb-page-desc">Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript.</span>
       </div>
     </div>
 
     <div class="topbar-right">
+      <!-- Botón Global de Relojes en Vivo & Convertidor de Moneda -->
+      <button id="btn-open-fx-drawer" class="utility-top-btn" title="Abrir Relojes de los 13 Países y Convertidor de Moneda">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span id="topbar-live-clock">AR 00:00 · FX Divisas</span>
+      </button>
+
+      <!-- Botón Modo Oscuro / Modo Claro -->
+      <button id="btn-theme-toggle" class="utility-top-btn" title="Alternar Modo Oscuro / Modo Claro">
+        <svg id="theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <span id="theme-toggle-label">Modo Claro</span>
+      </button>
+
       <div class="stage-Variable-pills">
-        <button class="stage-dot" data-tab="onboarding" title="01: Reglas & Compliance">01</button>
-        <button class="stage-dot" data-tab="builder" title="02: Flujo de Agentes & Acciones de Código">02</button>
-        <button class="stage-dot" data-tab="portfolio" title="03: Ingesta de Padrón E.164">03</button>
+        <button class="stage-dot" data-tab="onboarding" title="01: Reglas, Relojes & FX">01</button>
+        <button class="stage-dot" data-tab="builder" title="02: Flujo de Agentes & Acciones JS">02</button>
+        <button class="stage-dot" data-tab="portfolio" title="03: Ingesta E.164 & USD">03</button>
         <button class="stage-dot active" data-tab="simulator" title="04: Sandbox Multi-Agente">04</button>
         <button class="stage-dot" data-tab="qa" title="05: Gate QA (30 Casos)">05</button>
       </div>
@@ -167,7 +258,7 @@
   <main class="fullscreen-stage-container">
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 01: ONBOARDING DE CLIENTE & COMPLIANCE REGIONAL (13 PAÍSES)   -->
+    <!-- PÁGINA 01: ONBOARDING, RELOJES EN VIVO Y TASAS FX (13 PAÍSES)        -->
     <!-- =================================================================== -->
     <section id="tab-onboarding" class="stage-page">
       <div class="page-workspace onboarding-workspace">
@@ -179,8 +270,6 @@
             </div>
             <span id="ob-save-feedback" class="status-pill pill-emerald">Sincronizado</span>
           </div>
-
-          <p class="card-helper">Seleccioná una plantilla de industria o personalizá las atribuciones financieras que el orquestador inyectará en el System Prompt.</p>
 
           <div class="preset-selector-grid">
             <button type="button" class="preset-tile active" data-preset="banca_cobranzas">
@@ -230,37 +319,44 @@
 
             <div class="field-group">
               <label for="ob-rules">Reglas Duras de Negocio (Inyectadas al Agente)</label>
-              <textarea id="ob-rules" rows="4">Ofrecer siempre primero pago total con 25% de quita antes de ofrecer 6 cuotas sin interés. Nunca prometer descuentos mayores al tope autorizado ni contactar fuera de la ventana legal.</textarea>
+              <textarea id="ob-rules" rows="3">Ofrecer siempre primero pago total con 25% de quita antes de ofrecer 6 cuotas sin interés. Nunca prometer descuentos mayores al tope autorizado ni contactar fuera de la ventana legal.</textarea>
             </div>
 
-            <div class="form-footer-actions">
-              <button type="submit" class="btn-primary-action full-width">Guardar y Compilar Reglas en el Motor</button>
-            </div>
+            <button type="submit" class="btn-primary-action full-width">Guardar y Compilar Reglas en el Motor</button>
           </form>
+
+          <!-- Convertidor Rápido Integrado en Etapa 01 -->
+          <div class="subcard-block">
+            <div class="label-row-between">
+              <span class="subcard-title">Acceso Rápido: Convertidor FX &amp; Relojes</span>
+              <button type="button" id="btn-ob-open-fx" class="btn-ghost-sm btn-xs">Abrir Panel Completo ↗</button>
+            </div>
+            <p class="card-helper">Consultá en cualquier momento la hora real en las 13 capitales y convertí saldos de mora entre monedas locales y dólares (USD).</p>
+          </div>
         </div>
 
         <div class="workspace-card table-workspace-card">
           <div class="card-header-bar">
             <div>
-              <span class="eyebrow-tag">CUMPLIMIENTO NORMATIVO LATAM</span>
-              <h2>Matriz de 13 Países, Monedas y Ventanas Horarias</h2>
+              <span class="eyebrow-tag">CUMPLIMIENTO, RELOJ EN VIVO &amp; TIPO DE CAMBIO (13 PAÍSES)</span>
+              <h2>Matriz de Jurisdicciones, Hora Actual del Cliente, Tasa FX y Ventana Legal</h2>
             </div>
-            <span class="status-pill pill-neutral">Editable en Vivo</span>
+            <span class="status-pill pill-emerald">Relojes en Tiempo Real</span>
           </div>
 
-          <p class="card-helper">Modificá el horario permitido de cualquier país y presioná <strong>Guardar</strong> para actualizar la restricción legal en el motor de ruteo.</p>
+          <p class="card-helper">Podés editar en vivo la <strong>Ventana Horaria Legal</strong> y el <strong>Tipo de Cambio (`1 USD`)</strong> de cada país, o hacer clic en la hora para probar ese país en el Sandbox.</p>
 
           <div class="table-container-scroll">
             <table id="countries-table" class="precision-table">
               <thead>
                 <tr>
                   <th>ISO</th>
-                  <th>País</th>
-                  <th>Idioma</th>
-                  <th>Moneda</th>
-                  <th>Zona Horaria</th>
-                  <th>Inicio Legal</th>
-                  <th>Fin Legal</th>
+                  <th>País &amp; Capital</th>
+                  <th>Hora Actual Cliente</th>
+                  <th>Estado Hoy</th>
+                  <th>Moneda &amp; Tasa (1 USD)</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
                   <th>Normativa / Acción</th>
                 </tr>
               </thead>
@@ -276,7 +372,6 @@
     <!-- =================================================================== -->
     <section id="tab-builder" class="stage-page">
       <div class="page-workspace builder-workspace">
-        <!-- Columna 1: Arquitectura & Grafo de Nodos del Flujo -->
         <aside class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -300,7 +395,6 @@
           <div id="agent-nodes-list" class="agent-nodes-stack"></div>
         </aside>
 
-        <!-- Columna 2: Constructor y Configuración en Vivo del Sub-Agente -->
         <section class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -379,7 +473,6 @@
           </form>
         </section>
 
-        <!-- Columna 3: IDE de Acciones de Código JS (Code Actions Studio) -->
         <section class="workspace-card code-ide-card">
           <div class="card-header-bar">
             <div>
@@ -430,7 +523,7 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 03: INGESTA, NORMALIZACIÓN E.164 Y SEGMENTACIÓN DE PADRÓN     -->
+    <!-- PÁGINA 03: INGESTA E.164, CONVERSIÓN USD Y SEGMENTACIÓN DE PADRÓN    -->
     <!-- =================================================================== -->
     <section id="tab-portfolio" class="stage-page">
       <div class="page-workspace portfolio-workspace">
@@ -480,7 +573,7 @@
           </div>
 
           <button id="btn-validate-portfolio" class="btn-primary-action full-width">
-            Ejecutar Sanitización E.164, Filtro DNC y Segmentación
+            Ejecutar Sanitización E.164, Filtro DNC y Valuación USD
           </button>
 
           <form id="add-debtor-form" class="subcard-block clean-form">
@@ -519,15 +612,15 @@
               <strong id="pf-rejected">0</strong>
             </div>
             <div class="pf-kpi-card">
-              <span>Tiempo de Cómputo</span>
-              <strong id="pf-time">0 ms</strong>
+              <span>Valuación Consolidada</span>
+              <strong id="pf-usd-total" class="txt-emerald">US$ 0</strong>
             </div>
           </div>
 
           <div class="workspace-card table-workspace-card flex-grow-card">
             <div class="card-header-bar">
               <div>
-                <span class="eyebrow-tag">PADRONIZACIÓN E.164 APROBADA</span>
+                <span class="eyebrow-tag">PADRONIZACIÓN E.164 &amp; EQUIVALENCIA FX</span>
                 <h2>Cartera Lista para Despacho Outbound</h2>
               </div>
               <div class="btn-group-inline">
@@ -541,9 +634,9 @@
                   <tr>
                     <th>ID</th>
                     <th>Titular</th>
-                    <th>País</th>
+                    <th>País &amp; Hora</th>
                     <th>Teléfono E.164</th>
-                    <th>Saldo y Mora</th>
+                    <th>Saldo Local &amp; USD</th>
                     <th>Segmento</th>
                     <th>Política Asignada</th>
                     <th>Acción</th>
@@ -560,6 +653,7 @@
                 <span class="eyebrow-tag">AUDITORÍA DE EXCLUSIÓN</span>
                 <h2>Registros Retenidos por Guardrails Pre-Llamada</h2>
               </div>
+              <span id="pf-time" class="pill-mono">0 ms</span>
             </div>
             <div class="table-container-scroll">
               <table id="pf-rejected-table" class="precision-table">
@@ -601,6 +695,20 @@
               <select id="sim-country"></select>
             </div>
 
+            <!-- Tarjeta de Hora Real del Cliente + Equivalencia FX en el País Seleccionado -->
+            <div class="subcard-block sim-live-country-box">
+              <div class="label-row-between">
+                <span>Hora Real en <strong id="sim-live-country-name">Argentina</strong>:</span>
+                <strong id="sim-live-country-clock" class="pill-mono">--:--:--</strong>
+              </div>
+              <div class="label-row-between">
+                <span id="sim-live-fx-rate" class="pill-mono">1 USD = 1050 ARS</span>
+                <button type="button" id="btn-sync-real-hour" class="btn-ghost-sm btn-xs">
+                  Usar Hora Real
+                </button>
+              </div>
+            </div>
+
             <div class="field-group">
               <label for="sim-client">Perfil de Campaña</label>
               <select id="sim-client">
@@ -612,7 +720,7 @@
 
             <div class="field-group">
               <div class="label-row-between">
-                <label for="sim-hour">Hora Local Simulada</label>
+                <label for="sim-hour">Hora Simulada para Test Legal</label>
                 <span id="sim-hour-badge" class="pill-mono">14:00 hs</span>
               </div>
               <input type="range" id="sim-hour" min="0" max="23" value="14" class="precision-slider" />
@@ -683,7 +791,6 @@
           </div>
         </aside>
 
-        <!-- Panel Central: Terminal Conversacional WhatsApp / Callbot -->
         <section class="workspace-card chat-terminal-card">
           <div class="chat-terminal-header">
             <div class="chat-terminal-identity">
@@ -725,7 +832,6 @@
           </form>
         </section>
 
-        <!-- Panel Derecho: Inspector de Ingeniería -->
         <aside class="workspace-card inspector-panel">
           <div class="inspector-header">
             <div class="segmented-control">
