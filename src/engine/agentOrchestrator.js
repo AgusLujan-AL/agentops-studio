@@ -1,20 +1,28 @@
 /**
- * Módulo 3: Orquestador Multi-Agente, Configuración de Onboarding y Ejecución de Tools (Code Actions)
- * Mantiene memoria de sesión multi-turno (datos del deudor, tramo de mora, sucursales consultadas,
- * acuerdos confirmados y métricas del funnel conversacional).
+ * Módulo 3: Orquestador Multi-Agente, Configuración de Onboarding y Ejecución de Code Actions JS
+ * Mantiene memoria de sesión multi-turno y refleja en tiempo real los cambios hechos en
+ * el Agent Flow Builder y en el editor de Acciones de Código JavaScript.
  */
 import { routeConversation } from './router.js';
 import { findNearestBranches } from './geolocator.js';
+import {
+  AGENT_FLOW_NODES,
+  CODE_ACTIONS_REGISTRY,
+  executeCodeAction,
+  interpolateAgentTemplate
+} from './codeActionsEngine.js';
 
 export const CLIENT_PRESETS = {
   banca_cobranzas: {
     clientId: 'banca_cobranzas',
+    name: 'CrediPlus Bank LatAm — Recupero Mora',
     clientName: 'CrediPlus Bank LatAm',
     vertical: 'Banca Minorista & Recupero de Mora (Callbot + WhatsApp)',
     rolePrompt: 'Eres un Agente de IA de Atención Financiera y Cobranza Temprana. Tu objetivo es ayudar al cliente a regularizar su saldo pendiente con empatía, claridad y estricto apego normativo.',
     tone: 'Empático, profesional, resolutivo y directo.',
     maxDiscountPct: 25,
     maxInstallments: 6,
+    businessRules: 'Ofrecer siempre primero pago total con 25% de quita antes de ofrecer 6 cuotas sin interés. Nunca prometer descuentos mayores al tope autorizado ni contactar fuera de la ventana legal.',
     tranches: {
       early: { maxDiscountPct: 15, maxInstallments: 3 },
       mid: { maxDiscountPct: 25, maxInstallments: 6 },
@@ -29,12 +37,14 @@ export const CLIENT_PRESETS = {
   },
   retail_multinacional: {
     clientId: 'retail_multinacional',
+    name: 'MegaRetail LatAm (13 Países)',
     clientName: 'MegaRetail LatAm (13 Países)',
     vertical: 'Retail Multicanal & Tarjeta Propia (ES / PT)',
     rolePrompt: 'Eres el Agente Conversacional Oficial de financiación, pagos en sucursal y atención post-venta para 13 países de Latinoamérica.',
     tone: 'Ágil, cercano y orientado a resolución en el primer contacto (FCR).',
     maxDiscountPct: 20,
     maxInstallments: 6,
+    businessRules: 'Priorizar pago rápido o derivación a sucursal física cercana calculada con Turf.js para clientes que prefieren efectivo.',
     tranches: {
       early: { maxDiscountPct: 10, maxInstallments: 3 },
       mid: { maxDiscountPct: 20, maxInstallments: 6 },
@@ -48,12 +58,14 @@ export const CLIENT_PRESETS = {
   },
   gobierno_servicios: {
     clientId: 'gobierno_servicios',
+    name: 'Servicios & Utilities — Regularización',
     clientName: 'Portal Ciudadano / Servicios Públicos',
     vertical: 'Sector Público · Turnos con WhatsApp Flows & Regularización',
     rolePrompt: 'Eres un Asistente Guiado de Atención Ciudadana para gestión de turnos presenciales, planes de regularización y orientación de trámites.',
     tone: 'Institucional, claro, paciente y guiado paso a paso.',
     maxDiscountPct: 30,
     maxInstallments: 12,
+    businessRules: 'Validar titularidad y emitir código de barras para pago en ventanilla o plan de hasta 12 cuotas.',
     tranches: {
       early: { maxDiscountPct: 20, maxInstallments: 6 },
       mid: { maxDiscountPct: 30, maxInstallments: 12 },
@@ -69,24 +81,31 @@ export const CLIENT_PRESETS = {
 
 export function updateClientPreset(clientId, updatedConfig) {
   const base = CLIENT_PRESETS[clientId] || CLIENT_PRESETS.banca_cobranzas;
+  const mergedName = updatedConfig.name || updatedConfig.clientName || base.clientName;
   CLIENT_PRESETS[clientId] = {
     ...base,
-    ...updatedConfig
+    ...updatedConfig,
+    name: mergedName,
+    clientName: mergedName
   };
   return CLIENT_PRESETS[clientId];
 }
 
-export function buildAgentSystemPrompt(clientConfig, routingResult, effectiveDiscount, effectiveInstallments, customerContext) {
+export function buildAgentSystemPrompt(clientConfig, routingResult, effectiveDiscount, effectiveInstallments, customerContext, activeNode) {
+  const nodePrompt = activeNode?.systemPrompt || clientConfig.rolePrompt;
+  const actionName = activeNode?.codeActionId ? (CODE_ACTIONS_REGISTRY[activeNode.codeActionId]?.name || activeNode.codeActionId) : 'none';
   return [
     `[CLIENT_ENTITY]: ${clientConfig.clientName} (${clientConfig.vertical})`,
     `[ACTIVE_SUB_AGENT]: ${routingResult.routedTo} | [INTENT]: ${routingResult.intent}`,
+    `[SUB_AGENT_DIRECTIVE]: ${nodePrompt}`,
+    `[LINKED_CODE_ACTION]: ${actionName}`,
     `[JURISDICTION]: ${routingResult.country.name} (${routingResult.country.currency}) | Ventana: ${routingResult.country.windowStart}:00-${routingResult.country.windowEnd}:00 (${routingResult.withinContactWindow ? 'ENABLED' : 'OUT_OF_WINDOW'})`,
     `[COMPLIANCE_FRAMEWORK]: ${routingResult.country.dncRegistry}`,
     `[CUSTOMER_CONTEXT]: ${customerContext.customerName} | Mora: ${customerContext.daysPastDue} días (${customerContext.tranche}) | Saldo: ${customerContext.debtAmount} ${routingResult.country.currency}`,
     `[AUTHORIZED_LIMITS]: Quita máx: ${effectiveDiscount}% | Cuotas máx: ${effectiveInstallments} sin interés`,
+    `[BUSINESS_RULES]: ${clientConfig.businessRules || ''}`,
     `[LANGUAGE_MODE]: ${routingResult.language.toUpperCase()}`,
-    `[ACTIVE_GUARDRAILS]:\n  - ${clientConfig.guardrails.join('\n  - ')}`,
-    `[TOOLS_BOUND]: turf_find_nearest_branches(lat, lng), core_get_account_balance(customerId), crm_register_payment_promise(plan, amount), genesys_transfer_human(context)`
+    `[ACTIVE_GUARDRAILS]:\n  - ${(clientConfig.guardrails || []).join('\n  - ')}`
   ].join('\n');
 }
 
@@ -99,7 +118,10 @@ export function processAgentTurn({
   simulatedHour = 14,
   sessionState = {}
 }) {
-  const clientConfig = customClientConfig || CLIENT_PRESETS[clientId] || CLIENT_PRESETS.banca_cobranzas;
+  const basePreset = CLIENT_PRESETS[clientId] || CLIENT_PRESETS.banca_cobranzas;
+  const clientConfig = customClientConfig
+    ? { ...basePreset, ...customClientConfig, clientName: customClientConfig.name || basePreset.clientName }
+    : basePreset;
 
   // 1. Ruteo y sanitización de estado
   const routing = routeConversation({
@@ -109,12 +131,12 @@ export function processAgentTurn({
     simulatedHour
   });
 
+  const activeNode = AGENT_FLOW_NODES[routing.routedTo] || AGENT_FLOW_NODES.SupportTriageAgent;
   const lang = routing.language;
   const apiTraces = [];
-  let toolOutput = null;
+  let toolOutput = {};
   let botReply = '';
 
-  // Contexto del cliente en sesión (puede venir cargado desde la pestaña de Cartera o usar defaults del país)
   const customerName = routing.sessionState.customerName || 'Titular Verificado';
   const debtAmount = typeof routing.sessionState.debtAmount === 'number'
     ? routing.sessionState.debtAmount
@@ -129,6 +151,13 @@ export function processAgentTurn({
   const effectiveInstallments = typeof routing.sessionState.maxInstallments === 'number'
     ? routing.sessionState.maxInstallments
     : clientConfig.maxInstallments;
+
+  routing.sessionState.customerName = customerName;
+  routing.sessionState.debtAmount = debtAmount;
+  routing.sessionState.daysPastDue = daysPastDue;
+  routing.sessionState.tranche = tranche;
+  routing.sessionState.maxDiscountPct = effectiveDiscount;
+  routing.sessionState.maxInstallments = effectiveInstallments;
 
   const customerContext = { customerName, debtAmount, daysPastDue, tranche };
 
@@ -159,21 +188,54 @@ export function processAgentTurn({
       language: lang,
       languageSwitched: routing.languageSwitched,
       withinContactWindow: false,
-      systemPromptPreview: buildAgentSystemPrompt(clientConfig, routing, effectiveDiscount, effectiveInstallments, customerContext),
+      systemPromptPreview: buildAgentSystemPrompt(clientConfig, routing, effectiveDiscount, effectiveInstallments, customerContext, activeNode),
       apiTraces,
       toolOutput,
       sessionState: {
         ...routing.sessionState,
-        customerName,
-        debtAmount,
-        daysPastDue,
-        tranche,
         complianceBlocked: true
       }
     };
   }
 
-  // 3. Ejecución según el Sub-Agente e Intención asignados
+  // 3. Ejecutar Acción de Código JS vinculada al Sub-Agente (si tiene una configurada)
+  let actionResult = null;
+  if (activeNode?.codeActionId && routing.routedTo !== 'GuardrailSecurityAgent') {
+    actionResult = executeCodeAction(activeNode.codeActionId, {
+      state: routing.sessionState,
+      input: { message, userCoords, simulatedHour },
+      country: routing.country,
+      client: clientConfig
+    });
+
+    if (Array.isArray(actionResult.traces) && actionResult.traces.length > 0) {
+      apiTraces.push(...actionResult.traces);
+    }
+
+    routing.sessionState.lastCodeAction = {
+      actionId: actionResult.actionId,
+      actionName: actionResult.actionName,
+      executed: actionResult.executed,
+      executionTimeMs: actionResult.executionTimeMs,
+      logs: actionResult.logs,
+      output: actionResult.output
+    };
+  }
+
+  const actionSummary = actionResult?.output?.summaryText || '';
+  const templateVars = {
+    ...routing.sessionState,
+    ...(actionResult?.output || {}),
+    customerName,
+    debtAmount,
+    currency: routing.country.currency,
+    countryName: routing.country.name,
+    maxDiscountPct: effectiveDiscount,
+    maxInstallments: effectiveInstallments,
+    actionSummary
+  };
+
+  // 4. Resolver respuesta según el Sub-Agente activo
   if (routing.routedTo === 'GuardrailSecurityAgent') {
     apiTraces.push({
       method: 'POST',
@@ -239,13 +301,27 @@ export function processAgentTurn({
       .map((b, idx) => `${idx + 1}. **${b.name}** — a **${b.distanceKm} km** (~${b.estimatedWalkMin} min)\n   ${b.address} · Horario: ${b.hours}`)
       .join('\n');
 
-    botReply = lang === 'pt'
-      ? `Calculei as agências mais próximas em **${routing.country.name}** usando **Turf.js** (custo $0 de API externa, latência ${geoResult.executionTimeMs}ms):\n\n${listText}\n\nSelecione uma agência abaixo para agendar atendimento ou gerar seu código de pagamento:`
-      : `Calculé las sucursales más cercanas en **${routing.country.name}** mediante **Turf.js** ($0 costo en APIs externas, ${geoResult.executionTimeMs}ms):\n\n${listText}\n\nSeleccioná una sucursal de la lista interactiva para reservar turno o emitir tu código de pago por ventanilla:`;
+    if (activeNode?.customReplyEnabled) {
+      const customHeader = interpolateAgentTemplate(
+        lang === 'pt' ? activeNode.responseTemplatePt : activeNode.responseTemplateEs,
+        templateVars
+      );
+      botReply = `${customHeader}\n\n${listText}`;
+    } else {
+      botReply = lang === 'pt'
+        ? `Calculei as agências mais próximas em **${routing.country.name}** usando **Turf.js** (custo $0 de API externa, latência ${geoResult.executionTimeMs}ms):\n\n${listText}${actionSummary ? `\n\n• **Code Action:** ${actionSummary}` : ''}\n\nSelecione uma agência abaixo para agendar atendimento ou gerar seu código de pagamento:`
+        : `Calculé las sucursales más cercanas en **${routing.country.name}** mediante **Turf.js** ($0 costo en APIs externas, ${geoResult.executionTimeMs}ms):\n\n${listText}${actionSummary ? `\n\n• **Code Action:** ${actionSummary}` : ''}\n\nSeleccioná una sucursal de la lista interactiva para reservar turno o emitir tu código de pago por ventanilla:`;
+    }
   } else if (routing.routedTo === 'CollectionsNegotiationAgent') {
-    const discounted = Math.round(debtAmount * (1 - effectiveDiscount / 100));
-    const savings = debtAmount - discounted;
-    const installmentVal = Math.round(debtAmount / effectiveInstallments);
+    const discounted = typeof routing.sessionState.calculatedPayoff === 'number'
+      ? routing.sessionState.calculatedPayoff
+      : Math.round(debtAmount * (1 - effectiveDiscount / 100));
+    const savings = typeof routing.sessionState.calculatedSavings === 'number'
+      ? routing.sessionState.calculatedSavings
+      : (debtAmount - discounted);
+    const installmentVal = typeof routing.sessionState.calculatedInstallment === 'number'
+      ? routing.sessionState.calculatedInstallment
+      : Math.round(debtAmount / effectiveInstallments);
 
     apiTraces.push({
       method: 'GET',
@@ -321,9 +397,16 @@ export function processAgentTurn({
         ]
       };
 
-      botReply = lang === 'pt'
-        ? `Olá, **${customerName}**. Consultei sua conta em **${clientConfig.clientName}** (${tranche}):\n• Saldo atualizado: **${debtAmount.toLocaleString()} ${routing.country.currency}**\n\nOpções habilitadas para regularização imediata:\n1. **Opção 1 (Quitação com ${effectiveDiscount}% de desconto):** **${discounted.toLocaleString()} ${routing.country.currency}** (economia de ${savings.toLocaleString()} ${routing.country.currency})\n2. **Opção 2 (Parcelamento em ${effectiveInstallments}x fixas):** **${installmentVal.toLocaleString()} ${routing.country.currency}/mês**\n\nQual opção você prefere confirmar?`
-        : `Hola, **${customerName}**. Consulté tu estado de cuenta en línea en **${clientConfig.clientName}** (${tranche}):\n• Saldo exigible: **${debtAmount.toLocaleString()} ${routing.country.currency}**\n\nOpciones pre-aprobadas para tu perfil hoy:\n1. **Opción 1 (${effectiveDiscount}% de quita en 1 pago):** **${discounted.toLocaleString()} ${routing.country.currency}** (ahorrás ${savings.toLocaleString()} ${routing.country.currency})\n2. **Opción 2 (Plan de ${effectiveInstallments} cuotas fijas):** **${installmentVal.toLocaleString()} ${routing.country.currency}/mes**\n\nSeleccioná una opción abajo para registrar el acuerdo en línea:`;
+      if (activeNode?.customReplyEnabled) {
+        botReply = interpolateAgentTemplate(
+          lang === 'pt' ? activeNode.responseTemplatePt : activeNode.responseTemplateEs,
+          { ...templateVars, calculatedPayoff: discounted, calculatedInstallment: installmentVal }
+        );
+      } else {
+        botReply = lang === 'pt'
+          ? `Olá, **${customerName}**. Consultei sua conta em **${clientConfig.clientName}** (${tranche}):\n• Saldo atualizado: **${debtAmount.toLocaleString()} ${routing.country.currency}**\n\nOpções habilitadas para regularização imediata:\n1. **Opção 1 (Quitação com ${effectiveDiscount}% de desconto):** **${discounted.toLocaleString()} ${routing.country.currency}** (economia de ${savings.toLocaleString()} ${routing.country.currency})\n2. **Opção 2 (Parcelamento em ${effectiveInstallments}x fixas):** **${installmentVal.toLocaleString()} ${routing.country.currency}/mês**${actionSummary ? `\n\n• **Code Action (\`calculateDebtQuitaAndPlan.js\`):** ${actionSummary}` : ''}\n\nQual opção você prefere confirmar?`
+          : `Hola, **${customerName}**. Consulté tu estado de cuenta en línea en **${clientConfig.clientName}** (${tranche}):\n• Saldo exigible: **${debtAmount.toLocaleString()} ${routing.country.currency}**\n\nOpciones pre-aprobadas para tu perfil hoy:\n1. **Opción 1 (${effectiveDiscount}% de quita en 1 pago):** **${discounted.toLocaleString()} ${routing.country.currency}** (ahorrás ${savings.toLocaleString()} ${routing.country.currency})\n2. **Opción 2 (Plan de ${effectiveInstallments} cuotas fijas):** **${installmentVal.toLocaleString()} ${routing.country.currency}/mes**${actionSummary ? `\n\n• **Code Action (\`calculateDebtQuitaAndPlan.js\`):** ${actionSummary}` : ''}\n\nSeleccioná una opción abajo para registrar el acuerdo en línea:`;
+      }
     }
   } else if (routing.routedTo === 'HumanHandoffAgent') {
     const ticketId = `HND-${countryCode}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -346,6 +429,12 @@ export function processAgentTurn({
     botReply = lang === 'pt'
       ? `Transferindo seu atendimento para um especialista humano da equipe **${clientConfig.clientName}** (Protocolo \`${ticketId}\` · Fila: **${routing.country.name} / PT**).\nTodo o histórico e seu contexto (${customerName}) já foram enviados para que você não precise repetir informações.`
       : `Te estoy derivando con un especialista humano del equipo de **${clientConfig.clientName}** (Ticket \`${ticketId}\` · Cola: **${routing.country.name} / ES**).\nTransferí el resumen completo de la sesión (${customerName}) para que no tengas que repetir tus datos.`;
+  } else if (activeNode && (activeNode.isCustom || activeNode.customReplyEnabled || routing.routedTo === 'ReceiptValidationAgent')) {
+    routing.sessionState.conversationStage = `AGENT_${activeNode.id.toUpperCase()}`;
+    const tpl = lang === 'pt'
+      ? (activeNode.responseTemplatePt || activeNode.responseTemplateEs)
+      : activeNode.responseTemplateEs;
+    botReply = interpolateAgentTemplate(tpl, templateVars);
   } else {
     apiTraces.push({
       method: 'POST',
@@ -362,18 +451,12 @@ export function processAgentTurn({
     routing.sessionState.conversationStage = 'TRIAGE_ACTIVE';
 
     botReply = lang === 'pt'
-      ? `Olá, **${customerName}**. Sou o agente de IA de **${clientConfig.clientName}** (${routing.country.name}).${routing.languageSwitched ? '\n*(Idioma alterado para Português · Flags de roteamento higienizados sem loop)*' : ''}\n\nComo posso ajudar você hoje?\n• Consultar saldo e propostas de quitação (até **${effectiveDiscount}% OFF**)\n• Localizar a agência ou ponto de pagamento mais próximo (**Turf.js**)\n• Falar com um especialista humano.`
-      : `Hola, **${customerName}**. Soy el agente de IA de **${clientConfig.clientName}** (${routing.country.name}).${routing.languageSwitched ? '\n*(Idioma cambiado a Español · Flags transitorios de ruteo sanitizados sin loop)*' : ''}\n\n¿En qué te puedo ayudar hoy?\n• Consultar tu saldo y opciones de acuerdo (hasta **${effectiveDiscount}% de quita**)\n• Buscar la sucursal o centro de pago más cercano (**Turf.js**)\n• Derivarte con un especialista humano.`;
+      ? `Olá, **${customerName}**. Sou o agente de IA de **${clientConfig.clientName}** (${routing.country.name}).${routing.languageSwitched ? '\n*(Idioma alterado para Português · Flags de roteamento higienizados sem loop)*' : ''}\n\nComo posso ajudar você hoje?\n• Consultar saldo e propostas de quitação (até **${effectiveDiscount}% OFF**)\n• Localizar a agência ou ponto de pagamento mais próximo (**Turf.js**)\n• Informar comprovante de pagamento ou falar com um especialista.`
+      : `Hola, **${customerName}**. Soy el agente de IA de **${clientConfig.clientName}** (${routing.country.name}).${routing.languageSwitched ? '\n*(Idioma cambiado a Español · Flags transitorios de ruteo sanitizados sin loop)*' : ''}\n\n¿En qué te puedo ayudar hoy?\n• Consultar tu saldo y opciones de acuerdo (hasta **${effectiveDiscount}% de quita**)\n• Buscar la sucursal o centro de pago más cercano (**Turf.js**)\n• Informar un comprobante de transferencia o hablar con un asesor.`;
   }
 
   const nextState = {
     ...routing.sessionState,
-    customerName,
-    debtAmount,
-    daysPastDue,
-    tranche,
-    maxDiscountPct: effectiveDiscount,
-    maxInstallments: effectiveInstallments,
     turnsCount: (routing.sessionState.turnsCount || 0) + 1
   };
 
@@ -384,7 +467,7 @@ export function processAgentTurn({
     language: lang,
     languageSwitched: routing.languageSwitched,
     withinContactWindow: routing.withinContactWindow,
-    systemPromptPreview: buildAgentSystemPrompt(clientConfig, routing, effectiveDiscount, effectiveInstallments, customerContext),
+    systemPromptPreview: buildAgentSystemPrompt(clientConfig, routing, effectiveDiscount, effectiveInstallments, customerContext, activeNode),
     apiTraces,
     toolOutput,
     sessionState: nextState

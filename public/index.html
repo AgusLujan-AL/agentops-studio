@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AgentOps Studio — Consola de Implementación & QA Multi-Agente</title>
+  <title>AgentOps Studio — Consola de Implementación, Flujo de Agentes &amp; QA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
         </div>
         <div>
           <div class="brand-name">AgentOps Studio</div>
-          <div class="brand-meta">Implementation &amp; QA Workbench</div>
+          <div class="brand-meta">Implementation &amp; Agent Builder</div>
         </div>
       </div>
       <button id="btn-close-drawer" class="icon-btn" title="Cerrar menú (Esc)">
@@ -35,8 +35,8 @@
     </div>
 
     <div class="drawer-mission">
-      <div class="drawer-mission-label">FLUJO DE IMPLEMENTACIÓN</div>
-      <p>Consola de ingeniería de extremo a extremo para configurar reglas bancarias, sanitizar carteras E.164, auditar sub-agentes con geolocalización y certificar QA antes de producción.</p>
+      <div class="drawer-mission-label">PIPELINE DE IMPLEMENTACIÓN (5 ETAPAS)</div>
+      <p>Plataforma de ingeniería para configurar reglas bancarias, programar sub-agentes y acciones de código JS, sanitizar padrones E.164, simular con Turf.js y certificar QA.</p>
     </div>
 
     <nav class="drawer-nav-list">
@@ -47,12 +47,23 @@
             Reglas &amp; Compliance Regional
             <span class="drawer-badge">13 Países</span>
           </div>
-          <p>Configuración de políticas de quita, cuotas y ventanas legales de contacto por país.</p>
+          <p>Políticas de quita, cuotas y ventanas horarias legales por jurisdicción.</p>
+        </div>
+      </a>
+
+      <a href="#builder" class="drawer-item" data-tab="builder">
+        <span class="drawer-step-num">02</span>
+        <div class="drawer-item-body">
+          <div class="drawer-item-title">
+            Flujo de Agentes &amp; Acciones JS
+            <span id="nav-builder-badge" class="drawer-badge badge-live">6 Nodos · 4 JS</span>
+          </div>
+          <p>Creación de sub-agentes, disparadores de intención y editor de Code Actions en vivo.</p>
         </div>
       </a>
 
       <a href="#portfolio" class="drawer-item" data-tab="portfolio">
-        <span class="drawer-step-num">02</span>
+        <span class="drawer-step-num">03</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
             Ingesta &amp; Limpieza de Padrón
@@ -63,18 +74,18 @@
       </a>
 
       <a href="#simulator" class="drawer-item active" data-tab="simulator">
-        <span class="drawer-step-num">03</span>
+        <span class="drawer-step-num">04</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
             Sandbox Multi-Agente &amp; Turf.js
-            <span class="drawer-badge badge-live">En Vivo</span>
+            <span class="drawer-badge badge-live">Runtime</span>
           </div>
-          <p>Simulador WhatsApp/Callbot, sucursales de cobro presencial por GPS e inspector anti-loop.</p>
+          <p>Simulador WhatsApp/Callbot en vivo, sucursales por GPS e inspector anti-loop.</p>
         </div>
       </a>
 
       <a href="#qa" class="drawer-item" data-tab="qa">
-        <span class="drawer-step-num">04</span>
+        <span class="drawer-step-num">05</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
             Gate de Certificación QA
@@ -86,7 +97,7 @@
     </nav>
 
     <div class="drawer-telemetry">
-      <div class="drawer-mission-label">ESTADO GLOBAL DE CAMPAÑA</div>
+      <div class="drawer-mission-label">TELEMETRÍA DE CAMPAÑA</div>
       <div class="drawer-metrics-grid">
         <div class="drawer-metric-box">
           <span>Padrón E.164</span>
@@ -97,53 +108,54 @@
           <strong id="funnel-promises" class="txt-emerald">0</strong>
         </div>
         <div class="drawer-metric-box">
-          <span>Latencia Media</span>
+          <span>Latencia Turno</span>
           <strong id="telemetry-latency">11 ms</strong>
         </div>
         <div class="drawer-metric-box">
-          <span>Costo / Turno</span>
+          <span>Costo Est.</span>
           <strong id="telemetry-cost">$0.0014</strong>
         </div>
       </div>
     </div>
 
     <div class="drawer-footer">
-      <span>Arquitectura por <strong>Agustín Luján</strong></span>
-      <span class="pill-mono">v3.2</span>
+      <span>Desarrollado por <strong>Agustín Luján</strong></span>
+      <span class="pill-mono">v3.5</span>
     </div>
   </aside>
 
-  <!-- BARRA SUPERIOR SLIM (54px) PARA TRABAJAR A PANTALLA COMPLETA -->
+  <!-- BARRA SUPERIOR SLIM (52px) -->
   <header class="app-topbar">
     <div class="topbar-left">
-      <button id="btn-open-drawer" class="hamburger-trigger" title="Abrir menú de páginas (M)">
+      <button id="btn-open-drawer" class="hamburger-trigger" title="Abrir menú de páginas (Tecla M)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
           <line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
-        <span>Menú de Etapas</span>
+        <span>Menú</span>
       </button>
 
       <div class="topbar-divider"></div>
 
       <div class="active-page-crumb">
-        <span id="crumb-step" class="crumb-step-pill">ETAPA 03 / 04</span>
-        <h1 id="crumb-title" class="crumb-page-title">Sandbox Multi-Agente &amp; Inspector de Estado</h1>
-        <span id="crumb-desc" class="crumb-page-desc">Prueba conversacional en vivo, cobro presencial geolocalizado con Turf.js y auditoría anti-loop.</span>
+        <span id="crumb-step" class="crumb-step-pill">ETAPA 02 / 05</span>
+        <h1 id="crumb-title" class="crumb-page-title">Flujo de Creación de Agentes &amp; Acciones de Código JS</h1>
+        <span id="crumb-desc" class="crumb-page-desc">Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript que modifican al bot en vivo.</span>
       </div>
     </div>
 
     <div class="topbar-right">
       <div class="stage-Variable-pills">
-        <button class="stage-dot" data-tab="onboarding" title="Etapa 01: Reglas & Compliance">01</button>
-        <button class="stage-dot" data-tab="portfolio" title="Etapa 02: Ingesta de Padrón">02</button>
-        <button class="stage-dot active" data-tab="simulator" title="Etapa 03: Sandbox Multi-Agente">03</button>
-        <button class="stage-dot" data-tab="qa" title="Etapa 04: Certificación QA">04</button>
+        <button class="stage-dot" data-tab="onboarding" title="01: Reglas & Compliance">01</button>
+        <button class="stage-dot" data-tab="builder" title="02: Flujo de Agentes & Acciones de Código">02</button>
+        <button class="stage-dot" data-tab="portfolio" title="03: Ingesta de Padrón E.164">03</button>
+        <button class="stage-dot active" data-tab="simulator" title="04: Sandbox Multi-Agente">04</button>
+        <button class="stage-dot" data-tab="qa" title="05: Gate QA (30 Casos)">05</button>
       </div>
 
       <button id="btn-next-stage" class="btn-next-stage">
-        <span id="next-stage-label">Ir a Etapa 04: Gate QA</span>
+        <span id="next-stage-label">Siguiente Etapa</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
@@ -151,7 +163,7 @@
     </div>
   </header>
 
-  <!-- CONTENEDOR FULLSCREEN DE PÁGINAS INDEPENDIENTES -->
+  <!-- CONTENEDOR FULLSCREEN DE LAS 5 PÁGINAS -->
   <main class="fullscreen-stage-container">
 
     <!-- =================================================================== -->
@@ -159,7 +171,6 @@
     <!-- =================================================================== -->
     <section id="tab-onboarding" class="stage-page">
       <div class="page-workspace onboarding-workspace">
-        <!-- Columna Izquierda: Configuración de Reglas del Cliente -->
         <div class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -182,7 +193,7 @@
             <button type="button" class="preset-tile" data-preset="retail_multinacional">
               <div class="preset-tile-top">
                 <strong>Retail &amp; Consumo</strong>
-                <span class="pill-mono">15% · 3x</span>
+                <span class="pill-mono">20% · 6x</span>
               </div>
               <span>Créditos de consumo y derivación a pago en tienda física.</span>
             </button>
@@ -198,12 +209,12 @@
           <form id="onboarding-form" class="clean-form">
             <div class="field-group">
               <label for="ob-name">Nombre de la Entidad / Campaña</label>
-              <input type="text" id="ob-name" value="Banco Río Plata — Recupero Mora" required />
+              <input type="text" id="ob-name" value="CrediPlus Bank LatAm — Recupero Mora" required />
             </div>
 
             <div class="field-group">
               <label for="ob-tone">Directriz de Tono Conversacional</label>
-              <input type="text" id="ob-tone" value="empático, resolutivo y orientado a acuerdos de pago claros" required />
+              <input type="text" id="ob-tone" value="Empático, profesional, resolutivo y directo." required />
             </div>
 
             <div class="field-row-2">
@@ -223,12 +234,11 @@
             </div>
 
             <div class="form-footer-actions">
-              <button type="submit" class="btn-primary-action">Guardar y Compilar Reglas en el Motor</button>
+              <button type="submit" class="btn-primary-action full-width">Guardar y Compilar Reglas en el Motor</button>
             </div>
           </form>
         </div>
 
-        <!-- Columna Derecha: Matriz Regulatoria de 13 Países LatAm -->
         <div class="workspace-card table-workspace-card">
           <div class="card-header-bar">
             <div>
@@ -262,15 +272,172 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 02: INGESTA, NORMALIZACIÓN E.164 Y SEGMENTACIÓN DE PADRÓN     -->
+    <!-- PÁGINA 02: FLUJO DE CREACIÓN DE AGENTES & ACCIONES DE CÓDIGO JS      -->
+    <!-- =================================================================== -->
+    <section id="tab-builder" class="stage-page">
+      <div class="page-workspace builder-workspace">
+        <!-- Columna 1: Arquitectura & Grafo de Nodos del Flujo -->
+        <aside class="workspace-card scrollable-card">
+          <div class="card-header-bar">
+            <div>
+              <span class="eyebrow-tag">ARQUITECTURA MULTI-AGENTE</span>
+              <h2>Flujo de Sub-Agentes</h2>
+            </div>
+            <button type="button" id="btn-new-agent" class="btn-primary-action btn-xs">+ Crear Agente</button>
+          </div>
+
+          <div class="router-root-node">
+            <div class="router-node-top">
+              <span class="status-pill pill-indigo">ENTRYPOINT</span>
+              <span class="pill-mono">MAX_HOPS: 3</span>
+            </div>
+            <strong>Router &amp; Sanitizador Anti-Loop</strong>
+            <p>Detecta idioma (ES↔PT), verifica ventana horaria del país y deriva al sub-agente según intención.</p>
+          </div>
+
+          <div class="flow-connector-line">↓ Ruteo Dinámico por Intención + Keywords</div>
+
+          <div id="agent-nodes-list" class="agent-nodes-stack"></div>
+        </aside>
+
+        <!-- Columna 2: Constructor y Configuración en Vivo del Sub-Agente -->
+        <section class="workspace-card scrollable-card">
+          <div class="card-header-bar">
+            <div>
+              <span class="eyebrow-tag">CONSTRUCTOR DE SUB-AGENTE</span>
+              <h2 id="builder-agent-heading">Configuración del Nodo</h2>
+            </div>
+            <span id="agent-save-badge" class="status-pill pill-emerald">Activo en Runtime</span>
+          </div>
+
+          <form id="agent-builder-form" class="clean-form">
+            <div class="field-row-2">
+              <div class="field-group">
+                <label for="ag-id">Identificador del Sub-Agente (`id`)</label>
+                <input type="text" id="ag-id" required placeholder="Ej: VipRefinancingAgent" />
+              </div>
+              <div class="field-group">
+                <label for="ag-intent">Clave de Intención (`intent`)</label>
+                <input type="text" id="ag-intent" required placeholder="Ej: vip_refinancing" />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="ag-role">Rol / Especialidad Operativa</label>
+              <input type="text" id="ag-role" required placeholder="Descripción corta de la responsabilidad del agente" />
+            </div>
+
+            <div class="field-group">
+              <label for="ag-keywords">Palabras Clave Disparadoras (separadas por coma — ruteo en tiempo real)</label>
+              <input type="text" id="ag-keywords" required placeholder="comprobante, ya pague, transferencia, recibo" />
+            </div>
+
+            <div class="field-group">
+              <label for="ag-code-action">Acción de Código JS Vinculada (`Code Action` ejecutada antes de responder)</label>
+              <select id="ag-code-action"></select>
+            </div>
+
+            <div class="field-group">
+              <label for="ag-prompt">Directriz de System Prompt del Sub-Agente</label>
+              <textarea id="ag-prompt" rows="2"></textarea>
+            </div>
+
+            <div class="subcard-block">
+              <div class="label-row-between">
+                <label class="checkbox-inline">
+                  <input type="checkbox" id="ag-custom-reply-toggle" />
+                  <strong>Usar Plantilla de Respuesta Personalizada en el Bot</strong>
+                </label>
+                <span class="pill-mono">Variables Dinámicas</span>
+              </div>
+
+              <div class="var-chips-strip">
+                <button type="button" class="var-chip" data-var="{{customerName}}">{{customerName}}</button>
+                <button type="button" class="var-chip" data-var="{{debtAmount}}">{{debtAmount}}</button>
+                <button type="button" class="var-chip" data-var="{{currency}}">{{currency}}</button>
+                <button type="button" class="var-chip" data-var="{{countryName}}">{{countryName}}</button>
+                <button type="button" class="var-chip" data-var="{{maxDiscountPct}}">{{maxDiscountPct}}</button>
+                <button type="button" class="var-chip" data-var="{{calculatedPayoff}}">{{calculatedPayoff}}</button>
+                <button type="button" class="var-chip" data-var="{{actionSummary}}">{{actionSummary}}</button>
+              </div>
+
+              <div class="field-group">
+                <label for="ag-tpl-es">Plantilla de Respuesta en Español (`ES`)</label>
+                <textarea id="ag-tpl-es" rows="4" class="code-editor-area"></textarea>
+              </div>
+
+              <div class="field-group">
+                <label for="ag-tpl-pt">Plantilla de Respuesta en Portugués (`PT`)</label>
+                <textarea id="ag-tpl-pt" rows="3" class="code-editor-area"></textarea>
+              </div>
+            </div>
+
+            <div class="field-row-2">
+              <button type="submit" class="btn-primary-action">Guardar y Publicar en el Bot</button>
+              <button type="button" id="btn-test-agent-in-sim" class="btn-ghost-sm">Probar este Agente en Sandbox ↗</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Columna 3: IDE de Acciones de Código JS (Code Actions Studio) -->
+        <section class="workspace-card code-ide-card">
+          <div class="card-header-bar">
+            <div>
+              <span class="eyebrow-tag">ACCIONES DE CÓDIGO · NODE.JS VM</span>
+              <h2>IDE de Code Actions (JavaScript)</h2>
+            </div>
+            <div class="btn-group-inline">
+              <button type="button" id="btn-new-action" class="btn-ghost-sm btn-xs">+ Nueva Acción JS</button>
+              <span id="action-save-badge" class="status-pill pill-indigo">VM Sandbox</span>
+            </div>
+          </div>
+
+          <div class="field-row-2">
+            <div class="field-group">
+              <label for="ca-selector">Seleccionar Acción de Código</label>
+              <select id="ca-selector"></select>
+            </div>
+            <div class="field-group">
+              <label for="ca-name">Nombre del Archivo / Script</label>
+              <input type="text" id="ca-name" class="pill-mono" placeholder="customAction.js" />
+            </div>
+          </div>
+
+          <div class="code-signature-bar">
+            <code>async function runCodeAction(state, input, country, client, api) {</code>
+          </div>
+
+          <textarea id="ca-code-editor" class="js-code-textarea" spellcheck="false"></textarea>
+
+          <div class="code-signature-bar">
+            <code>} // Mutá state.*, registrá api.trace(...) y devolvé { summaryText }</code>
+          </div>
+
+          <div class="field-row-2">
+            <button type="button" id="btn-run-action-test" class="btn-ghost-sm">▶ Ejecutar Dry-Run (Consola)</button>
+            <button type="button" id="btn-save-action" class="btn-primary-action">Publicar Código en el Bot</button>
+          </div>
+
+          <div class="ide-console-box">
+            <div class="label-row-between">
+              <span class="subcard-title">Consola de Salida &amp; Mutación de Sesión</span>
+              <span id="ca-exec-time" class="pill-mono">Listo</span>
+            </div>
+            <pre id="ca-console-output" class="code-viewer-pre compact-console-pre">// Hacé clic en "▶ Ejecutar Dry-Run" para probar el código JS contra el estado actual de sesión.</pre>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- PÁGINA 03: INGESTA, NORMALIZACIÓN E.164 Y SEGMENTACIÓN DE PADRÓN     -->
     <!-- =================================================================== -->
     <section id="tab-portfolio" class="stage-page">
       <div class="page-workspace portfolio-workspace">
-        <!-- Columna Izquierda: Editor de Lote + Reglas de Tramos + Alta Manual -->
         <div class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
-              <span class="eyebrow-tag">ETAPA 02 · PIPELINE DE DATOS</span>
+              <span class="eyebrow-tag">ETAPA 03 · PIPELINE DE DATOS</span>
               <h2>Ingesta de Cartera (JSON / CSV)</h2>
             </div>
             <div class="btn-group-inline">
@@ -337,7 +504,6 @@
           </form>
         </div>
 
-        <!-- Columna Derecha: Resultados de Sanitización y Despacho a Simulador -->
         <div class="portfolio-results-column">
           <div class="pf-kpi-strip">
             <div class="pf-kpi-card">
@@ -416,11 +582,10 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 03: SANDBOX MULTI-AGENTE, TURF.JS & INSPECTOR ANTI-LOOP       -->
+    <!-- PÁGINA 04: SANDBOX MULTI-AGENTE, TURF.JS & INSPECTOR ANTI-LOOP       -->
     <!-- =================================================================== -->
     <section id="tab-simulator" class="stage-page active">
       <div class="page-workspace simulator-workspace">
-        <!-- Panel Izquierdo: Parámetros de Sesión, Coordenadas Turf.js y Escenarios -->
         <aside class="workspace-card sim-controls-panel scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -494,12 +659,16 @@
               <span class="subcard-title">Escenarios de Prueba en 1 Clic</span>
               <div class="scenario-stack">
                 <button type="button" class="scenario-item" data-msg="Hola, quiero consultar mi saldo vencido y qué descuento tienen hoy">
-                  <span class="scenario-tag">API</span>
-                  <span>Consultar deuda y opciones de quita</span>
+                  <span class="scenario-tag">QUITA</span>
+                  <span>Consultar deuda + Code Action Quita</span>
                 </button>
-                <button type="button" class="scenario-item" data-msg="Prefiero pagar en efectivo por ventanilla, ¿qué sucursal tengo más cerca de mi ubicación?">
+                <button type="button" class="scenario-item" data-msg="Ya pagué hoy por transferencia bancaria, les paso el comprobante">
+                  <span class="scenario-tag">RECIBO</span>
+                  <span>Validar comprobante (ReceiptAgent)</span>
+                </button>
+                <button type="button" class="scenario-item" data-msg="Prefiero pagar en efectivo por ventanilla, ¿qué sucursal tengo más cerca?">
                   <span class="scenario-tag">TURF</span>
-                  <span>Buscar sucursal cercana para pago presencial</span>
+                  <span>Sucursal cercana (@turf/turf + Token)</span>
                 </button>
                 <button type="button" class="scenario-item" data-msg="Olá, falo português, quero negociar minha fatura e pagar com desconto">
                   <span class="scenario-tag">ES↔PT</span>
@@ -548,7 +717,7 @@
             <input
               type="text"
               id="chat-input"
-              placeholder="Escribí como cliente o hacé clic en las opciones interactivas del agente..."
+              placeholder="Escribí como cliente o probá los agentes y Code Actions creados en la Etapa 02..."
               autocomplete="off"
               required
             />
@@ -556,17 +725,16 @@
           </form>
         </section>
 
-        <!-- Panel Derecho: Inspector de Ingeniería (Estado, Trazas HTTP, System Prompt) -->
+        <!-- Panel Derecho: Inspector de Ingeniería -->
         <aside class="workspace-card inspector-panel">
           <div class="inspector-header">
             <div class="segmented-control">
               <button type="button" class="seg-btn active" data-itab="state">Estado &amp; Anti-Loop</button>
-              <button type="button" class="seg-btn" data-itab="traces">Trazas API</button>
+              <button type="button" class="seg-btn" data-itab="traces">Trazas &amp; Code Actions</button>
               <button type="button" class="seg-btn" data-itab="prompt">System Prompt</button>
             </div>
           </div>
 
-          <!-- Sub-vista 1: Estado & Sanitizador Anti-Loop -->
           <div id="itab-state" class="inspector-body active">
             <div class="inspector-metrics-row">
               <div class="inspector-stat">
@@ -580,7 +748,7 @@
             </div>
 
             <div class="inspector-Action-strip">
-              <span class="subcard-title">JSON de Sesión Sanitizado</span>
+              <span class="subcard-title">JSON de Sesión + Variables de Code Actions</span>
               <button type="button" id="btn-force-loop-test" class="btn-ghost-sm" title="Simular exceso de rebotes (>3 hops) para verificar circuit-breaker">
                 Probar Circuit-Breaker (&gt;3 Hops)
               </button>
@@ -588,17 +756,15 @@
             <pre id="state-json-viewer" class="code-viewer-pre"></pre>
           </div>
 
-          <!-- Sub-vista 2: Trazas REST API & Cálculos Turf.js -->
           <div id="itab-traces" class="inspector-body">
             <div class="inspector-Action-strip">
-              <span class="subcard-title">Llamadas a Microservicios</span>
+              <span class="subcard-title">Ejecución de Microservicios &amp; Scripts JS</span>
               <span id="api-count-label" class="pill-mono">0 operaciones</span>
             </div>
             <div id="api-cards-container" class="api-trace-stack"></div>
             <pre id="api-traces-viewer" class="code-viewer-pre"></pre>
           </div>
 
-          <!-- Sub-vista 3: System Prompt Compilado -->
           <div id="itab-prompt" class="inspector-body">
             <div class="inspector-Action-strip">
               <span class="subcard-title">Prompt Inyectado en Runtime</span>
@@ -611,15 +777,14 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 04: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN                    -->
+    <!-- PÁGINA 05: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN                    -->
     <!-- =================================================================== -->
     <section id="tab-qa" class="stage-page">
       <div class="page-workspace qa-workspace">
-        <!-- Columna Izquierda: Tabla Completa de 30 Casos -->
         <div class="workspace-card table-workspace-card">
           <div class="card-header-bar">
             <div>
-              <span class="eyebrow-tag">ETAPA 04 · CERTIFICACIÓN PRE-PRODUCCIÓN</span>
+              <span class="eyebrow-tag">ETAPA 05 · CERTIFICACIÓN PRE-PRODUCCIÓN</span>
               <h2>Batería Automatizada de 30 Casos de QA</h2>
             </div>
             <div class="btn-group-inline">
@@ -656,7 +821,6 @@
           </div>
         </div>
 
-        <!-- Columna Derecha: Inspector de Aserciones del Caso Seleccionado -->
         <aside class="workspace-card qa-inspector-panel scrollable-card">
           <div class="card-header-bar">
             <div>

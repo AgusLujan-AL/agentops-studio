@@ -1399,3 +1399,172 @@ input:focus, select:focus, textarea:focus {
   .crumb-page-desc { display: none; }
   .simulator-workspace { grid-template-columns: 280px 1fr 340px; }
 }
+
+
+/* ========================================================================= */
+/* PÁGINA 02: FLUJO DE CREACIÓN DE AGENTES & IDE DE CODE ACTIONS             */
+/* ========================================================================= */
+.builder-workspace {
+  grid-template-columns: 330px 1fr 470px;
+}
+
+.router-root-node {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(14, 16, 21, 0.95));
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  border-radius: 9px;
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.router-node-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.router-root-node strong {
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+
+.router-root-node p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.38;
+}
+
+.flow-connector-line {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: #60a5fa;
+  padding: 3px 0;
+  border-left: 1px dashed rgba(59, 130, 246, 0.4);
+  margin-left: 18px;
+  padding-left: 10px;
+}
+
+.agent-nodes-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-node-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agent-node-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+}
+
+.agent-node-card.active {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.agent-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.agent-node-header strong {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-primary);
+}
+
+.agent-node-role {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.agent-node-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.var-chips-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.var-chip {
+  background: var(--bg-canvas);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+
+.var-chip:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* IDE de Code Actions JS */
+.code-ide-card {
+  overflow: hidden;
+}
+
+.code-signature-bar {
+  background: #0b0d13;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.js-code-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 220px;
+  background: #07080c !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: 6px;
+  padding: 11px 13px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11.5px !important;
+  line-height: 1.52 !important;
+  color: #e2e8f0 !important;
+  resize: none;
+}
+
+.ide-console-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 155px;
+  flex-shrink: 0;
+}
+
+.compact-console-pre {
+  font-size: 10.5px;
+  color: #34d399;
+  background: #06070a;
+}

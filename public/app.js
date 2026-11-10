@@ -2,6 +2,10 @@ let countriesMeta = {};
 let defaultCoordsByCountry = {};
 let clientPresets = {};
 let samplePortfolio = [];
+let agentFlowNodes = {};
+let codeActions = {};
+let selectedAgentId = 'CollectionsNegotiationAgent';
+let selectedActionId = 'action_calc_quita';
 let sessionState = {};
 let customClientConfig = null;
 let callbotVoiceEnabled = false;
@@ -14,28 +18,35 @@ let currentStage = 'simulator';
 
 const STAGE_META = {
   onboarding: {
-    step: 'ETAPA 01 / 04',
+    step: 'ETAPA 01 / 05',
     title: 'Reglas de Negocio & Compliance Regional (13 Países)',
     desc: 'Configuración de políticas bancarias de quita, cuotas y ventanas horarias legales en Latinoamérica.',
+    nextStage: 'builder',
+    nextLabel: 'Ir a Etapa 02: Flujo & Código JS'
+  },
+  builder: {
+    step: 'ETAPA 02 / 05',
+    title: 'Flujo de Creación de Agentes & IDE de Acciones de Código JS',
+    desc: 'Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript que modifican al bot en vivo.',
     nextStage: 'portfolio',
-    nextLabel: 'Ir a Etapa 02: Ingesta E.164'
+    nextLabel: 'Ir a Etapa 03: Ingesta E.164'
   },
   portfolio: {
-    step: 'ETAPA 02 / 04',
+    step: 'ETAPA 03 / 05',
     title: 'Ingesta, Sanitización E.164 & Segmentación de Cartera',
     desc: 'Normalización telefónica internacional, bloqueo de Registro No Llame (DNC) y asignación de oferta por mora.',
     nextStage: 'simulator',
-    nextLabel: 'Ir a Etapa 03: Sandbox IA'
+    nextLabel: 'Ir a Etapa 04: Sandbox IA'
   },
   simulator: {
-    step: 'ETAPA 03 / 04',
+    step: 'ETAPA 04 / 05',
     title: 'Sandbox Multi-Agente, Cobro Presencial Turf.js & Inspector',
-    desc: 'Prueba conversacional en vivo, geolocalización de sucursales por GPS y auditoría de estado anti-loop.',
+    desc: 'Prueba conversacional en vivo reflejando tus cambios de Agentes, Code Actions JS, Cartera y Reglas.',
     nextStage: 'qa',
-    nextLabel: 'Ir a Etapa 04: Gate QA (30)'
+    nextLabel: 'Ir a Etapa 05: Gate QA (30)'
   },
   qa: {
-    step: 'ETAPA 04 / 04',
+    step: 'ETAPA 05 / 05',
     title: 'Certificación Pre-Producción (Suite de 30 Casos QA)',
     desc: 'Verificación automatizada de ruteo bilingüe ES/PT, precisión geodésica Turf.js y guardrails de seguridad.',
     nextStage: 'onboarding',
@@ -46,6 +57,7 @@ const STAGE_META = {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadInitialConfig();
   setupNavigationAndDrawer();
+  setupBuilderAndCodeActions();
   setupInspectorTabs();
   setupSimulatorControls();
   setupSpeechRecognition();
@@ -53,16 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupOnboardingControls();
   setupQaControls();
 
-  // Cargar datos iniciales en segundo plano para todas las etapas
   await executePortfolioValidation();
   await executeQaSuite();
 
-  // Respetar hash de URL si existe (#onboarding, #portfolio, #simulator, #qa)
   const initialHash = window.location.hash.replace('#', '');
   if (STAGE_META[initialHash]) {
     navigateToStage(initialHash, false);
   } else {
-    navigateToStage('simulator', false);
+    navigateToStage('builder', false);
   }
 });
 
@@ -73,6 +83,8 @@ async function loadInitialConfig() {
   defaultCoordsByCountry = data.defaultCoords || {};
   clientPresets = data.clientPresets || {};
   samplePortfolio = data.samplePortfolio || [];
+  agentFlowNodes = data.agentFlowNodes || {};
+  codeActions = data.codeActions || {};
 
   const simCountry = document.getElementById('sim-country');
   const addCountry = document.getElementById('add-country');
@@ -93,11 +105,12 @@ async function loadInitialConfig() {
 
   document.getElementById('pf-raw-editor').value = JSON.stringify(samplePortfolio, null, 2);
   renderCountriesTable();
+  renderBuilderView();
   resetConversationSession();
 }
 
 // =========================================================================
-// MENÚ HAMBURGUESA & NAVEGACIÓN DE PÁGINAS A PANTALLA COMPLETA
+// MENÚ HAMBURGUESA & NAVEGACIÓN FULLSCREEN (5 ETAPAS)
 // =========================================================================
 function toggleDrawer(forceOpen) {
   const drawer = document.getElementById('nav-drawer');
@@ -115,21 +128,17 @@ function navigateToStage(stageKey, pushHash = true) {
     history.replaceState(null, '', `#${stageKey}`);
   }
 
-  // Actualizar secciones fullscreen
   document.querySelectorAll('.stage-page').forEach(sec => sec.classList.remove('active'));
   document.getElementById(`tab-${stageKey}`)?.classList.add('active');
 
-  // Actualizar items del menú hamburguesa
   document.querySelectorAll('.drawer-item').forEach(item => {
     item.classList.toggle('active', item.dataset.tab === stageKey);
   });
 
-  // Actualizar dots rápidos 01-04
   document.querySelectorAll('.stage-dot').forEach(dot => {
     dot.classList.toggle('active', dot.dataset.tab === stageKey);
   });
 
-  // Actualizar barra superior contextual
   const meta = STAGE_META[stageKey];
   document.getElementById('crumb-step').textContent = meta.step;
   document.getElementById('crumb-title').textContent = meta.title;
@@ -177,6 +186,312 @@ function setupNavigationAndDrawer() {
   });
 }
 
+// =========================================================================
+// ETAPA 02: FLUJO DE CREACIÓN DE AGENTES & IDE DE CODE ACTIONS JS
+// =========================================================================
+function updateBuilderDrawerBadge() {
+  const nodesCount = Object.keys(agentFlowNodes).length;
+  const actionsCount = Object.keys(codeActions).length;
+  document.getElementById('nav-builder-badge').textContent = `${nodesCount} Nodos · ${actionsCount} JS`;
+}
+
+function renderBuilderView() {
+  updateBuilderDrawerBadge();
+  renderAgentNodesStack();
+  populateCodeActionSelectors();
+  loadAgentIntoForm(selectedAgentId);
+  loadActionIntoEditor(selectedActionId);
+}
+
+function renderAgentNodesStack() {
+  const container = document.getElementById('agent-nodes-list');
+  container.innerHTML = '';
+
+  Object.values(agentFlowNodes).forEach(node => {
+    const div = document.createElement('div');
+    div.className = `agent-node-card ${node.id === selectedAgentId ? 'active' : ''}`;
+    const actionObj = codeActions[node.codeActionId];
+    const actionLabel = actionObj ? `⚡ ${actionObj.name}` : 'Sin Code Action';
+    const kwPreview = (node.keywords || []).slice(0, 4).join(', ');
+
+    div.innerHTML = `
+      <div class="agent-node-header">
+        <strong>${node.id}</strong>
+        <span class="status-pill ${node.isCustom ? 'pill-amber' : 'pill-indigo'}">${node.isCustom ? 'Custom' : 'Core'}</span>
+      </div>
+      <div class="agent-node-role">${node.role}</div>
+      <div class="agent-node-footer">
+        <span class="pill-mono">${actionLabel}</span>
+        <span class="pill-mono" title="Keywords">${kwPreview || 'default'}</span>
+      </div>
+    `;
+
+    div.addEventListener('click', () => {
+      selectedAgentId = node.id;
+      renderAgentNodesStack();
+      loadAgentIntoForm(node.id);
+      if (node.codeActionId && codeActions[node.codeActionId]) {
+        selectedActionId = node.codeActionId;
+        loadActionIntoEditor(selectedActionId);
+      }
+    });
+
+    container.appendChild(div);
+  });
+}
+
+function populateCodeActionSelectors() {
+  const agActionSelect = document.getElementById('ag-code-action');
+  const caSelector = document.getElementById('ca-selector');
+  agActionSelect.innerHTML = '<option value="">— Sin Acción de Código JS —</option>';
+  caSelector.innerHTML = '';
+
+  Object.values(codeActions).forEach(act => {
+    const opt1 = document.createElement('option');
+    opt1.value = act.id;
+    opt1.textContent = `${act.name} — ${act.title}`;
+    agActionSelect.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = act.id;
+    opt2.textContent = `${act.name} (${act.id})`;
+    caSelector.appendChild(opt2);
+  });
+}
+
+function loadAgentIntoForm(agentId) {
+  const node = agentFlowNodes[agentId];
+  if (!node) return;
+  document.getElementById('builder-agent-heading').textContent = `Editando: ${node.id}`;
+  document.getElementById('ag-id').value = node.id;
+  document.getElementById('ag-intent').value = node.intent || '';
+  document.getElementById('ag-role').value = node.role || '';
+  document.getElementById('ag-keywords').value = (node.keywords || []).join(', ');
+  document.getElementById('ag-code-action').value = node.codeActionId || '';
+  document.getElementById('ag-prompt').value = node.systemPrompt || '';
+  document.getElementById('ag-custom-reply-toggle').checked = Boolean(node.customReplyEnabled || node.isCustom);
+  document.getElementById('ag-tpl-es').value = node.responseTemplateEs || '';
+  document.getElementById('ag-tpl-pt').value = node.responseTemplatePt || '';
+}
+
+function loadActionIntoEditor(actionId) {
+  const act = codeActions[actionId];
+  if (!act) return;
+  document.getElementById('ca-selector').value = act.id;
+  document.getElementById('ca-name').value = act.name;
+  document.getElementById('ca-code-editor').value = act.code;
+}
+
+async function saveCurrentAgentNode() {
+  const payload = {
+    id: document.getElementById('ag-id').value.trim().replace(/\s+/g, ''),
+    intent: document.getElementById('ag-intent').value.trim(),
+    role: document.getElementById('ag-role').value.trim(),
+    keywords: document.getElementById('ag-keywords').value,
+    codeActionId: document.getElementById('ag-code-action').value,
+    systemPrompt: document.getElementById('ag-prompt').value.trim(),
+    customReplyEnabled: document.getElementById('ag-custom-reply-toggle').checked,
+    responseTemplateEs: document.getElementById('ag-tpl-es').value,
+    responseTemplatePt: document.getElementById('ag-tpl-pt').value,
+    isCustom: !agentFlowNodes[document.getElementById('ag-id').value.trim()]
+  };
+
+  const res = await fetch('/api/builder/agent', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (data.agentFlowNodes) {
+    agentFlowNodes = data.agentFlowNodes;
+    selectedAgentId = data.node.id;
+    renderAgentNodesStack();
+    updateBuilderDrawerBadge();
+  }
+
+  const badge = document.getElementById('agent-save-badge');
+  badge.textContent = 'Publicado en Bot ✓';
+  setTimeout(() => { badge.textContent = 'Activo en Runtime'; }, 2200);
+  return data.node;
+}
+
+async function saveCurrentCodeAction() {
+  const currentAct = codeActions[selectedActionId] || {};
+  const payload = {
+    id: selectedActionId,
+    name: document.getElementById('ca-name').value.trim() || 'customAction.js',
+    title: currentAct.title || 'Acción JS Personalizada',
+    linkedAgent: selectedAgentId,
+    code: document.getElementById('ca-code-editor').value
+  };
+
+  const res = await fetch('/api/builder/action', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (data.codeActions) {
+    codeActions = data.codeActions;
+    populateCodeActionSelectors();
+    document.getElementById('ca-selector').value = selectedActionId;
+    document.getElementById('ag-code-action').value = agentFlowNodes[selectedAgentId]?.codeActionId || '';
+    renderAgentNodesStack();
+    updateBuilderDrawerBadge();
+  }
+
+  const badge = document.getElementById('action-save-badge');
+  badge.className = 'status-pill pill-emerald';
+  badge.textContent = 'Código Activo en Bot ✓';
+  setTimeout(() => {
+    badge.className = 'status-pill pill-indigo';
+    badge.textContent = 'VM Sandbox';
+  }, 2200);
+  return data.action;
+}
+
+function setupBuilderAndCodeActions() {
+  // Insertar chips de variables en la plantilla ES
+  document.querySelectorAll('.var-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const textarea = document.getElementById('ag-tpl-es');
+      const start = textarea.selectionStart || textarea.value.length;
+      const v = chip.dataset.var;
+      textarea.value = textarea.value.slice(0, start) + v + textarea.value.slice(start);
+      document.getElementById('ag-custom-reply-toggle').checked = true;
+      textarea.focus();
+    });
+  });
+
+  // Botón + Crear Nuevo Sub-Agente
+  document.getElementById('btn-new-agent').addEventListener('click', () => {
+    const customNum = Object.keys(agentFlowNodes).length + 1;
+    const newId = `VipRefinancingAgent_${customNum}`;
+    document.getElementById('builder-agent-heading').textContent = `Nuevo Sub-Agente: ${newId}`;
+    document.getElementById('ag-id').value = newId;
+    document.getElementById('ag-intent').value = 'vip_refinancing';
+    document.getElementById('ag-role').value = 'Refinanciación Especial de Cartera Hipotecaria / VIP';
+    document.getElementById('ag-keywords').value = 'vip, refinanciar, hipoteca, especial, gerente';
+    document.getElementById('ag-code-action').value = 'action_calc_quita';
+    document.getElementById('ag-prompt').value = 'Sos el Sub-Agente VIP de Refinanciación Especial. Otorgá atención preferencial y aplicá la cotización calculada por la Acción de Código.';
+    document.getElementById('ag-custom-reply-toggle').checked = true;
+    document.getElementById('ag-tpl-es').value =
+      '🌟 **[Atención Preferencial VIP — {{countryName}}]**\nHola **{{customerName}}**, activé el protocolo especial para tu saldo de **{{debtAmount}} {{currency}}**.\n\n• **Liquidación Preferencial ({{maxDiscountPct}}% OFF):** **{{calculatedPayoff}} {{currency}}**\n• **Resultado de Code Action:** {{actionSummary}}\n\n¿Confirmamos esta refinanciación prioritaria?';
+    document.getElementById('ag-tpl-pt').value =
+      '🌟 **[Atendimento VIP — {{countryName}}]**\nOlá **{{customerName}}**, ativei o protocolo especial para seu saldo de **{{debtAmount}} {{currency}}**.\n\n• **Quitação VIP ({{maxDiscountPct}}% OFF):** **{{calculatedPayoff}} {{currency}}**\n• **Code Action:** {{actionSummary}}';
+  });
+
+  // Guardar Sub-Agente
+  document.getElementById('agent-builder-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveCurrentAgentNode();
+  });
+
+  // Guardar y Probar en el Sandbox inmediatamente
+  document.getElementById('btn-test-agent-in-sim').addEventListener('click', async () => {
+    await saveCurrentCodeAction();
+    const savedNode = await saveCurrentAgentNode();
+    const firstKw = (savedNode.keywords || ['consulta'])[0];
+
+    navigateToStage('simulator');
+    const testUtterance = `Hola, me comunico porque necesito gestionar: ${firstKw}`;
+    await sendMessage(testUtterance);
+  });
+
+  // Selector de Code Action
+  document.getElementById('ca-selector').addEventListener('change', (e) => {
+    selectedActionId = e.target.value;
+    loadActionIntoEditor(selectedActionId);
+  });
+
+  // Botón + Nueva Acción de Código JS
+  document.getElementById('btn-new-action').addEventListener('click', () => {
+    const newActId = `action_custom_${Date.now().toString().slice(-3)}`;
+    selectedActionId = newActId;
+    codeActions[newActId] = {
+      id: newActId,
+      name: `customBonusRule_${newActId.slice(-3)}.js`,
+      title: 'Bonificación Especial por Pago Inmediato',
+      linkedAgent: selectedAgentId,
+      code: `// Nueva Acción de Código JS — Modificá state.* y probala en vivo
+const deudaBase = Number(state.debtAmount || 185000);
+const bonoExtra = Math.round(deudaBase * 0.10);
+const saldoFinalVip = deudaBase - bonoExtra;
+
+// Guardar en el estado de sesión del bot
+state.vipBonusApplied = bonoExtra;
+state.calculatedPayoff = saldoFinalVip;
+
+// Registrar traza HTTP hacia API externa
+api.trace('POST', '/api/v1/promotions/apply-instant-bonus', 200, {
+  customer: state.customerName,
+  bonusApplied: bonoExtra,
+  finalBalance: saldoFinalVip
+});
+
+api.log(\`Bono instantáneo aplicado: -\${bonoExtra} \${country.currency}\`);
+
+return {
+  calculatedPayoff: saldoFinalVip,
+  summaryText: \`Bono extra de \${bonoExtra.toLocaleString()} \${country.currency} acreditado (Saldo final: \${saldoFinalVip.toLocaleString()} \${country.currency})\`
+};`
+    };
+    populateCodeActionSelectors();
+    loadActionIntoEditor(newActId);
+    document.getElementById('ag-code-action').value = newActId;
+  });
+
+  // Ejecutar Dry-Run de la Acción de Código en consola
+  document.getElementById('btn-run-action-test').addEventListener('click', async () => {
+    const countryCode = document.getElementById('sim-country').value || 'AR';
+    const clientId = document.getElementById('sim-client').value || 'banca_cobranzas';
+    const actionPayload = {
+      id: selectedActionId,
+      name: document.getElementById('ca-name').value.trim() || 'customAction.js',
+      title: codeActions[selectedActionId]?.title || 'Acción JS',
+      linkedAgent: selectedAgentId,
+      code: document.getElementById('ca-code-editor').value
+    };
+
+    const res = await fetch('/api/builder/action/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionPayload,
+        sessionState,
+        countryCode,
+        clientId
+      })
+    });
+    const data = await res.json();
+    if (data.action) {
+      codeActions[data.action.id] = data.action;
+    }
+
+    const r = data.result || {};
+    document.getElementById('ca-exec-time').textContent = r.executed
+      ? `200 OK · ${r.executionTimeMs} ms`
+      : `ERROR · ${r.executionTimeMs} ms`;
+
+    const consoleLines = [
+      `// [VM Execution: ${r.actionName}] — Status: ${r.executed ? 'SUCCESS' : 'FAILED'}`,
+      ...(r.logs || []).map(l => `> ${l}`),
+      '',
+      '// [Return Output]:',
+      JSON.stringify(r.output, null, 2),
+      '',
+      '// [Generated API Traces]:',
+      JSON.stringify(r.traces, null, 2)
+    ];
+    document.getElementById('ca-console-output').textContent = consoleLines.join('\n');
+  });
+
+  // Publicar Código en el Bot
+  document.getElementById('btn-save-action').addEventListener('click', async () => {
+    await saveCurrentCodeAction();
+  });
+}
+
 function setupInspectorTabs() {
   document.querySelectorAll('.seg-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -203,7 +518,7 @@ function speakCallbotReply(text, langCode = 'es') {
 }
 
 // =========================================================================
-// ETAPA 03: SANDBOX MULTI-AGENTE + TURF.JS + INSPECTOR ANTI-LOOP
+// ETAPA 04: SANDBOX MULTI-AGENTE + TURF.JS + INSPECTOR ANTI-LOOP
 // =========================================================================
 function setupSimulatorControls() {
   const countrySelect = document.getElementById('sim-country');
@@ -312,11 +627,12 @@ function resetConversationSession() {
   container.innerHTML = '';
   appendChatBubble(
     'bot',
-    `Sesión inicializada en **${c.name}** (${c.currency}).\nPodés escribir libremente, usar el micrófono, disparar una plantilla HSM o hacer clic en cualquiera de las opciones interactivas:`,
-    'SYSTEM_BOOT · Runtime Multi-Agente Listo',
+    `Sesión inicializada en **${c.name}** (${c.currency}).\nTodos los Sub-Agentes y **Acciones de Código JS** de la Etapa 02 están activos en memoria:`,
+    'SYSTEM_BOOT · Runtime Multi-Agente + Node.js VM',
     [
-      { label: 'Consultar deuda y opciones de quita', msg: 'Hola, quiero consultar mi deuda pendiente y ver qué descuento tienen' },
-      { label: 'Buscar sucursal cercana para pagar en efectivo (Turf.js)', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar por ventanilla?' }
+      { label: 'Consultar deuda + Ejecutar calculateDebtQuitaAndPlan.js', msg: 'Hola, quiero consultar mi deuda pendiente y ver qué descuento tienen' },
+      { label: 'Validar comprobante de transferencia (verifyPaymentReceiptOCR.js)', msg: 'Ya pagué hoy por transferencia bancaria, tengo el comprobante' },
+      { label: 'Buscar sucursal cercana para pagar en efectivo (@turf/turf)', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar por ventanilla?' }
     ]
   );
 
@@ -341,8 +657,8 @@ function triggerWhatsAppHsmTemplate() {
 
   appendChatBubble('bot', hsmText, 'OUTBOUND_HSM_TEMPLATE · WhatsApp Business API', [
     { label: c.lang === 'pt' ? 'Ver proposta com desconto' : 'Consultar saldo y oferta con quita', msg: c.lang === 'pt' ? 'Quero consultar minha fatura e opções de acordo' : 'Quiero consultar mi deuda pendiente y ver qué descuento tienen' },
-    { label: c.lang === 'pt' ? 'Localizar agência próxima (Turf.js)' : 'Buscar sucursal cercana (Turf.js)', msg: c.lang === 'pt' ? 'Qual a agência mais próxima de mim?' : '¿Qué sucursal tengo más cerca de mi ubicación para pagar?' },
-    { label: c.lang === 'pt' ? 'Falar com especialista humano' : 'Hablar con un especialista humano', msg: c.lang === 'pt' ? 'Preciso falar com um atendente humano' : 'Quiero hablar con un asesor humano' }
+    { label: c.lang === 'pt' ? 'Informar comprovante PIX/TED' : 'Informar comprobante de pago realizado', msg: c.lang === 'pt' ? 'Já paguei e tenho o comprovante' : 'Ya pagué por transferencia y tengo el comprobante' },
+    { label: c.lang === 'pt' ? 'Localizar agência próxima (Turf.js)' : 'Buscar sucursal cercana (Turf.js)', msg: c.lang === 'pt' ? 'Qual a agência mais próxima de mim?' : '¿Qué sucursal tengo más cerca de mi ubicación para pagar?' }
   ]);
 }
 
@@ -424,10 +740,14 @@ async function sendMessage(message) {
     interactiveButtons = data.toolOutput.negotiationOptions;
   }
 
+  const codeActionTag = sessionState.lastCodeAction?.actionName
+    ? ` · ⚡ ${sessionState.lastCodeAction.actionName}`
+    : '';
+
   appendChatBubble(
     'bot',
     data.reply,
-    `${data.routedTo} · intent=${data.intent} · lang=${data.language.toUpperCase()}`,
+    `${data.routedTo} · intent=${data.intent}${codeActionTag}`,
     interactiveButtons
   );
 
@@ -513,7 +833,7 @@ function setupSpeechRecognition() {
 }
 
 // =========================================================================
-// ETAPA 02: INGESTA Y LIMPIEZA DE CARTERA E.164
+// ETAPA 03: INGESTA Y LIMPIEZA DE CARTERA E.164
 // =========================================================================
 function getCustomTranchesFromForm() {
   return {
@@ -598,7 +918,7 @@ function renderValidPortfolioTable() {
       <td class="pill-mono"><strong>${r.debtAmount.toLocaleString()} ${r.currency}</strong> (${r.daysPastDue}d)</td>
       <td>${r.tranche}</td>
       <td><span class="status-pill pill-emerald">${r.maxDiscountPct}% quita · ${r.maxInstallments}x</span></td>
-      <td><button class="btn-primary-action btn-xs">Simular en Etapa 03 ↗</button></td>
+      <td><button class="btn-primary-action btn-xs">Simular en Sandbox ↗</button></td>
     `;
     tr.querySelector('button').addEventListener('click', () => {
       document.getElementById('sim-country').value = r.country;
@@ -714,11 +1034,11 @@ function setupOnboardingControls() {
       if (!p) return;
 
       document.getElementById('sim-client').value = presetKey;
-      document.getElementById('ob-name').value = p.name;
+      document.getElementById('ob-name').value = p.name || p.clientName;
       document.getElementById('ob-tone').value = p.tone;
       document.getElementById('ob-discount').value = p.maxDiscountPct;
       document.getElementById('ob-installments').value = p.maxInstallments;
-      document.getElementById('ob-rules').value = p.businessRules;
+      document.getElementById('ob-rules').value = p.businessRules || '';
     });
   });
 
@@ -794,7 +1114,7 @@ function renderCountriesTable() {
 }
 
 // =========================================================================
-// ETAPA 04: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN
+// ETAPA 05: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN
 // =========================================================================
 function setupQaControls() {
   document.getElementById('btn-run-qa').addEventListener('click', executeQaSuite);
