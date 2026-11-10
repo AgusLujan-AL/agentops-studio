@@ -1,6 +1,6 @@
 /**
  * Módulo 4: Batería de 30 Casos de QA para Validación Pre-Producción de Agentes de IA
- * Evalúa regresión en ruteo multi-país, sanitización anti-loop en cambio de idioma,
+ * Evalúa regresión en ruteo multi-país (13 países), sanitización anti-loop en cambio de idioma,
  * cálculo geodésico con Turf.js, registro de promesas de pago, cumplimiento horario y guardrails.
  */
 import { processAgentTurn } from '../engine/agentOrchestrator.js';
@@ -23,10 +23,10 @@ export const QA_TEST_CASES = [
   { id: 'QA-12', category: 'Geolocalización Turf.js', title: 'Generación de estructura Interactive List para WhatsApp', input: { countryCode: 'CO', message: 'Buscar sucursal cerca en Bogotá' }, expect: { routedTo: 'GeoBranchAgent', hasWhatsAppList: true } },
 
   // Categoría 3: Cobranzas, Negociación y Promesas de Pago vía API REST (6 casos)
-  { id: 'QA-13', category: 'Negociación & APIs', title: 'Consulta de saldo y oferta de quita en Argentina', input: { countryCode: 'AR', message: 'Quiero saber cuánto debo y si hay algún descuento' }, expect: { routedTo: 'CollectionsNegotiationAgent', apiCalled: '/api/v1/core-banking/accounts' } },
-  { id: 'QA-14', category: 'Negociación & APIs', title: 'Registro de promesa de pago en 1 pago con descuento (POST 201)', input: { countryCode: 'AR', message: 'Acepto pagar mi deuda hoy en 1 pago con descuento' }, expect: { routedTo: 'CollectionsNegotiationAgent', apiCalled: '/api/v1/collections/payment-promises', hasPromiseId: true } },
-  { id: 'QA-15', category: 'Negociación & APIs', title: 'Registro de acuerdo de pago en cuotas en México', input: { countryCode: 'MX', message: 'Quiero confirmar el plan de cuotas para pagar mi saldo' }, expect: { routedTo: 'CollectionsNegotiationAgent', hasPromiseId: true } },
-  { id: 'QA-16', category: 'Negociación & APIs', title: 'Negociación y registro de acordo en Brasil (PIX)', input: { countryCode: 'BR', message: 'Quero pagar minha fatura com acordo parcelado' }, expect: { routedTo: 'CollectionsNegotiationAgent', language: 'pt', hasPromiseId: true } },
+  { id: 'QA-13', category: 'Negociación & APIs', title: 'Consulta de saldo y oferta de quita en Argentina', input: { countryCode: 'AR', message: 'Quiero saber cuánto debo y si hay algún descuento' }, expect: { routedTo: 'CollectionsNegotiationAgent', apiCalled: '/api/v1/core-banking/obligations' } },
+  { id: 'QA-14', category: 'Negociación & APIs', title: 'Registro de promesa de pago en 1 pago con descuento (POST 201)', input: { countryCode: 'AR', message: 'Acepto confirmar la Opción 1 en 1 pago con descuento, registrar promesa' }, expect: { routedTo: 'CollectionsNegotiationAgent', apiCalled: '/api/v1/collections/payment-promises', hasPromiseId: true } },
+  { id: 'QA-15', category: 'Negociación & APIs', title: 'Registro de acuerdo de pago en cuotas en México', input: { countryCode: 'MX', message: 'Acepto confirmar la Opción 2 en plan de cuotas' }, expect: { routedTo: 'CollectionsNegotiationAgent', hasPromiseId: true } },
+  { id: 'QA-16', category: 'Negociación & APIs', title: 'Negociación y registro de acordo en Brasil (PIX)', input: { countryCode: 'BR', message: 'Quero pagar minha fatura e confirmar a Opção 1' }, expect: { routedTo: 'CollectionsNegotiationAgent', language: 'pt', hasPromiseId: true } },
   { id: 'QA-17', category: 'Negociación & APIs', title: 'Consulta de vencimiento en Uruguay (UYU)', input: { countryCode: 'UY', message: 'Tengo una cuota en mora, qué opciones tengo' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'UYU' } },
   { id: 'QA-18', category: 'Negociación & APIs', title: 'Consulta de saldo en Ecuador dolarizado (USD)', input: { countryCode: 'EC', message: 'Quiero regularizar mi deuda pendiente' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'USD' } },
 
@@ -39,12 +39,12 @@ export const QA_TEST_CASES = [
   { id: 'QA-24', category: 'Guardrails & Compliance', title: 'Contacto habilitado dentro de ventana legal en Perú (11:00 hs)', input: { countryCode: 'PE', message: 'Quiero ver opciones de pago de mi deuda', simulatedHour: 11 }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'PEN' } },
 
   // Categoría 5: Handoff a Humano con Transferencia de Contexto & Cobertura Regional (6 casos)
-  { id: 'QA-25', category: 'Handoff & Cobertura 13 Países', title: 'Derivación a asesor humano en Argentina con ticket Genesys', input: { countryCode: 'AR', message: 'Quiero hablar con un asesor humano por un reclamo' }, expect: { routedTo: 'HumanHandoffAgent', hasHandoffTicket: true } },
-  { id: 'QA-26', category: 'Handoff & Cobertura 13 Países', title: 'Derivación a atendente humano en Brasil manteniendo idioma PT', input: { countryCode: 'BR', message: 'Preciso falar com um atendente humano urgente' }, expect: { routedTo: 'HumanHandoffAgent', language: 'pt', hasHandoffTicket: true } },
-  { id: 'QA-27', category: 'Handoff & Cobertura 13 Países', title: 'Operación regional en Paraguay (PYG)', input: { countryCode: 'PY', message: 'Quiero pagar mi saldo pendiente' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'PYG' } },
-  { id: 'QA-28', category: 'Handoff & Cobertura 13 Países', title: 'Operación regional en Bolivia (BOB)', input: { countryCode: 'BO', message: 'Consultar deuda y cuotas' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'BOB' } },
-  { id: 'QA-29', category: 'Handoff & Cobertura 13 Países', title: 'Operación regional en Costa Rica y Panamá (CRC / USD)', input: { countryCode: 'PA', message: 'Necesito hacer una promesa de pago' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'USD' } },
-  { id: 'QA-30', category: 'Handoff & Cobertura 13 Países', title: 'Operación regional en Guatemala (GTQ)', input: { countryCode: 'GT', message: 'Consultar cuota vencida' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'GTQ' } }
+  { id: 'QA-25', category: 'Handoff & 13 Países', title: 'Derivación a asesor humano en Argentina con ticket de cola', input: { countryCode: 'AR', message: 'Quiero hablar con un asesor humano por un reclamo' }, expect: { routedTo: 'HumanHandoffAgent', hasHandoffTicket: true } },
+  { id: 'QA-26', category: 'Handoff & 13 Países', title: 'Derivación a atendente humano en Brasil manteniendo idioma PT', input: { countryCode: 'BR', message: 'Preciso falar com um atendente humano urgente' }, expect: { routedTo: 'HumanHandoffAgent', language: 'pt', hasHandoffTicket: true } },
+  { id: 'QA-27', category: 'Handoff & 13 Países', title: 'Operación regional en Paraguay (PYG)', input: { countryCode: 'PY', message: 'Quiero pagar mi saldo pendiente' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'PYG' } },
+  { id: 'QA-28', category: 'Handoff & 13 Países', title: 'Operación regional en Bolivia (BOB)', input: { countryCode: 'BO', message: 'Consultar deuda y cuotas' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'BOB' } },
+  { id: 'QA-29', category: 'Handoff & 13 Países', title: 'Operación regional en Costa Rica y Panamá (CRC / USD)', input: { countryCode: 'PA', message: 'Necesito hacer una promesa de pago' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'USD' } },
+  { id: 'QA-30', category: 'Handoff & 13 Países', title: 'Operación regional en Guatemala (GTQ)', input: { countryCode: 'GT', message: 'Consultar cuota vencida' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'GTQ' } }
 ];
 
 export function runQaSuite() {
@@ -101,8 +101,11 @@ export function runQaSuite() {
       passed,
       durationMs,
       routedTo: out.routedTo,
+      intent: out.intent,
+      input: tc.input,
       checks,
-      replyPreview: out.reply.slice(0, 140)
+      reply: out.reply,
+      apiTraces: out.apiTraces
     });
   }
 
@@ -115,13 +118,6 @@ export function runQaSuite() {
     failedCount: results.length - passedCount,
     passRatePct: Math.round((passedCount / results.length) * 100),
     totalDurationMs,
-    funnelMetrics: {
-      contacted: 1250,
-      engaged: 940,
-      selfServedByAgent: 785,
-      paymentPromisesRegistered: 412,
-      humanHandoffRatePct: 12.4
-    },
     results
   };
 }
