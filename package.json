@@ -1,0 +1,27 @@
+{
+  "name": "agentops-studio",
+  "version": "1.0.0",
+  "description": "Plataforma de Onboarding, Ruteo Multi-país (13 países), Geolocalización con Turf.js y Suite de 30 Casos de QA para Agentes de IA Conversacional (Chatbots & Callbots).",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test:qa": "node src/qa/cliRunner.js"
+  },
+  "keywords": [
+    "conversational-ai",
+    "ai-agents",
+    "callbots",
+    "chatbots",
+    "whatsapp-flows",
+    "turfjs",
+    "prompt-engineering",
+    "qa-automation"
+  ],
+  "author": "Agustín Luján <agustin.lujan.it@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@turf/turf": "^7.2.0",
+    "express": "^4.21.2"
+  }
+}
