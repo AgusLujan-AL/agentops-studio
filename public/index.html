@@ -49,7 +49,7 @@
             Reglas, Relojes &amp; Divisas FX
             <span class="drawer-badge">13 Países</span>
           </div>
-          <p>Políticas de quita, husos horarios en vivo, convertidor multimoneda y ventanas legales.</p>
+          <p>Políticas de quita, husos horarios 24h en vivo, convertidor multimoneda y ventanas legales.</p>
         </div>
       </a>
 
@@ -60,7 +60,7 @@
             Flujo de Agentes &amp; Acciones JS
             <span id="nav-builder-badge" class="drawer-badge badge-live">6 Nodos · 4 JS</span>
           </div>
-          <p>Creación de sub-agentes, disparadores de intención y editor de Code Actions en vivo.</p>
+          <p>Probador de ruteo en vivo, creación de sub-agentes y editor de Code Actions Node.js VM.</p>
         </div>
       </a>
 
@@ -68,10 +68,10 @@
         <span class="drawer-step-num">03</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
-            Ingesta E.164 &amp; Valuación USD
+            Ingesta E.164 &amp; Despacho Batch
             <span id="nav-pf-badge" class="drawer-badge">8 Listos</span>
           </div>
-          <p>Normalización telefónica E.164, bloqueo DNC, conversión a USD y segmentación por mora.</p>
+          <p>Normalización E.164, bloqueo DNC, valuación USD, reparación de errores y despacho masivo.</p>
         </div>
       </a>
 
@@ -79,10 +79,10 @@
         <span class="drawer-step-num">04</span>
         <div class="drawer-item-body">
           <div class="drawer-item-title">
-            Sandbox Multi-Agente &amp; Turf.js
+            Sandbox, Radar Turf.js &amp; Diff
             <span class="drawer-badge badge-live">Runtime</span>
           </div>
-          <p>Simulador WhatsApp/Callbot en vivo, sucursales por GPS e inspector anti-loop.</p>
+          <p>Simulador WhatsApp/Callbot, radar geodésico interactivo, GPS real e inspector de mutaciones.</p>
         </div>
       </a>
 
@@ -93,7 +93,7 @@
             Gate de Certificación QA
             <span id="nav-qa-badge" class="drawer-badge badge-emerald">30/30</span>
           </div>
-          <p>Suite automatizada de 30 casos de regresión pre-producción (inyección, horario, ruteo).</p>
+          <p>Suite automatizada de 30+ casos de regresión, creador de tests y exportación de certificado.</p>
         </div>
       </a>
     </nav>
@@ -122,7 +122,7 @@
 
     <div class="drawer-footer">
       <span>Desarrollado por <strong>Agustín Luján</strong></span>
-      <span class="pill-mono">v4.0</span>
+      <span class="pill-mono">v4.5</span>
     </div>
   </aside>
 
@@ -141,7 +141,6 @@
     </div>
 
     <div class="fx-drawer-content">
-      <!-- Convertidor Multimoneda Interactivo -->
       <div class="subcard-block">
         <div class="label-row-between">
           <span class="subcard-title">Calculadora de Divisas (13 Países ↔ USD)</span>
@@ -177,13 +176,12 @@
         </div>
       </div>
 
-      <!-- Grilla de Relojes en Vivo de los 13 Países -->
       <div class="subcard-block">
         <div class="label-row-between">
           <span class="subcard-title">Hora Actual de los Clientes por País (13 Jurisdicciones)</span>
           <span class="status-pill pill-emerald">Sincronizado UTC</span>
         </div>
-        <p class="card-helper">Verificá qué hora es en este instante en cada país, si la ventana legal permite llamadas salientes y cuando equivale el monto ingresado en su moneda local.</p>
+        <p class="card-helper">Verificá qué hora es en este instante en cada país, si la ventana legal permite llamadas salientes y cuánto equivale el monto ingresado en su moneda local.</p>
 
         <div id="live-clocks-grid" class="live-clocks-grid"></div>
       </div>
@@ -205,25 +203,23 @@
       <div class="topbar-divider"></div>
 
       <div class="active-page-crumb">
-        <span id="crumb-step" class="crumb-step-pill">ETAPA 02 / 05</span>
-        <h1 id="crumb-title" class="crumb-page-title">Flujo de Creación de Agentes &amp; Acciones de Código JS</h1>
-        <span id="crumb-desc" class="crumb-page-desc">Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript.</span>
+        <span id="crumb-step" class="crumb-step-pill">ETAPA 04 / 05</span>
+        <h1 id="crumb-title" class="crumb-page-title">Sandbox Multi-Agente, Radar Turf.js &amp; Inspector</h1>
+        <span id="crumb-desc" class="crumb-page-desc">Prueba conversacional en vivo reflejando tus cambios de Agentes, Code Actions JS, Cartera y Reglas.</span>
       </div>
     </div>
 
     <div class="topbar-right">
-      <!-- Botón Global de Relojes en Vivo & Convertidor de Moneda -->
       <button id="btn-open-fx-drawer" class="utility-top-btn" title="Abrir Relojes de los 13 Países y Convertidor de Moneda">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/>
           <polyline points="12 6 12 12 16 14"/>
         </svg>
-        <span id="topbar-live-clock">AR 00:00 · FX Divisas</span>
+        <span id="topbar-live-clock">AR 00:00 · Relojes &amp; FX</span>
       </button>
 
-      <!-- Botón Modo Oscuro / Modo Claro -->
       <button id="btn-theme-toggle" class="utility-top-btn" title="Alternar Modo Oscuro / Modo Claro">
-        <svg id="theme-icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/>
           <line x1="12" y1="1" x2="12" y2="3"/>
           <line x1="12" y1="21" x2="12" y2="23"/>
@@ -231,8 +227,6 @@
           <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
           <line x1="1" y1="12" x2="3" y2="12"/>
           <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
         <span id="theme-toggle-label">Modo Claro</span>
       </button>
@@ -240,9 +234,9 @@
       <div class="stage-Variable-pills">
         <button class="stage-dot" data-tab="onboarding" title="01: Reglas, Relojes & FX">01</button>
         <button class="stage-dot" data-tab="builder" title="02: Flujo de Agentes & Acciones JS">02</button>
-        <button class="stage-dot" data-tab="portfolio" title="03: Ingesta E.164 & USD">03</button>
+        <button class="stage-dot" data-tab="portfolio" title="03: Ingesta E.164 & Despacho">03</button>
         <button class="stage-dot active" data-tab="simulator" title="04: Sandbox Multi-Agente">04</button>
-        <button class="stage-dot" data-tab="qa" title="05: Gate QA (30 Casos)">05</button>
+        <button class="stage-dot" data-tab="qa" title="05: Gate QA (30+ Casos)">05</button>
       </div>
 
       <button id="btn-next-stage" class="btn-next-stage">
@@ -258,7 +252,7 @@
   <main class="fullscreen-stage-container">
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 01: ONBOARDING, RELOJES EN VIVO Y TASAS FX (13 PAÍSES)        -->
+    <!-- PÁGINA 01: ONBOARDING, RELOJES EN VIVO 24H Y TASAS FX (13 PAÍSES)    -->
     <!-- =================================================================== -->
     <section id="tab-onboarding" class="stage-page">
       <div class="page-workspace onboarding-workspace">
@@ -325,26 +319,28 @@
             <button type="submit" class="btn-primary-action full-width">Guardar y Compilar Reglas en el Motor</button>
           </form>
 
-          <!-- Convertidor Rápido Integrado en Etapa 01 -->
           <div class="subcard-block">
             <div class="label-row-between">
-              <span class="subcard-title">Acceso Rápido: Convertidor FX &amp; Relojes</span>
-              <button type="button" id="btn-ob-open-fx" class="btn-ghost-sm btn-xs">Abrir Panel Completo ↗</button>
+              <span class="subcard-title">Portabilidad de Configuración</span>
+              <button type="button" id="btn-export-blueprint" class="btn-ghost-sm btn-xs">Exportar Blueprint (.json)</button>
             </div>
-            <p class="card-helper">Consultá en cualquier momento la hora real en las 13 capitales y convertí saldos de mora entre monedas locales y dólares (USD).</p>
+            <p class="card-helper">Descargá un snapshot completo con tus reglas de cliente, tasas FX, sub-agentes y acciones de código JS.</p>
           </div>
         </div>
 
         <div class="workspace-card table-workspace-card">
           <div class="card-header-bar">
             <div>
-              <span class="eyebrow-tag">CUMPLIMIENTO, RELOJ EN VIVO &amp; TIPO DE CAMBIO (13 PAÍSES)</span>
+              <span class="eyebrow-tag">CUMPLIMIENTO, LÍNEA DE TIEMPO 24H &amp; TIPO DE CAMBIO (13 PAÍSES)</span>
               <h2>Matriz de Jurisdicciones, Hora Actual del Cliente, Tasa FX y Ventana Legal</h2>
             </div>
-            <span class="status-pill pill-emerald">Relojes en Tiempo Real</span>
+            <div class="btn-group-inline">
+              <button type="button" id="btn-ob-open-fx" class="btn-ghost-sm btn-xs">Calculadora Multimoneda ↗</button>
+              <span class="status-pill pill-emerald">Relojes en Vivo</span>
+            </div>
           </div>
 
-          <p class="card-helper">Podés editar en vivo la <strong>Ventana Horaria Legal</strong> y el <strong>Tipo de Cambio (`1 USD`)</strong> de cada país, o hacer clic en la hora para probar ese país en el Sandbox.</p>
+          <p class="card-helper">La barra visual de 24 hs muestra la ventana legal pintada en verde y la posición exacta de la hora actual del cliente en ese país.</p>
 
           <div class="table-container-scroll">
             <table id="countries-table" class="precision-table">
@@ -353,7 +349,7 @@
                   <th>ISO</th>
                   <th>País &amp; Capital</th>
                   <th>Hora Actual Cliente</th>
-                  <th>Estado Hoy</th>
+                  <th>Línea 24h &amp; Estado</th>
                   <th>Moneda &amp; Tasa (1 USD)</th>
                   <th>Inicio</th>
                   <th>Fin</th>
@@ -372,6 +368,7 @@
     <!-- =================================================================== -->
     <section id="tab-builder" class="stage-page">
       <div class="page-workspace builder-workspace">
+        <!-- Columna 1: Probador de Ruteo en Vivo + Mapa de Nodos -->
         <aside class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -379,6 +376,23 @@
               <h2>Flujo de Sub-Agentes</h2>
             </div>
             <button type="button" id="btn-new-agent" class="btn-primary-action btn-xs">+ Crear Agente</button>
+          </div>
+
+          <!-- Probador Instantáneo de Ruteo (Live Utterance Tester) -->
+          <div class="subcard-block live-router-tester">
+            <div class="label-row-between">
+              <span class="subcard-title">Probador de Ruteo en Tiempo Real</span>
+              <span id="live-route-badge" class="status-pill pill-indigo">SupportTriageAgent</span>
+            </div>
+            <input
+              type="text"
+              id="builder-test-utterance"
+              placeholder="Escribí una frase (ej: 'ya pagué comprobante' o 'sucursal')..."
+              autocomplete="off"
+            />
+            <div id="live-route-explain" class="live-route-explain">
+              Tipeá arriba para ver qué nodo y qué Code Action se activan en el grafo.
+            </div>
           </div>
 
           <div class="router-root-node">
@@ -395,6 +409,7 @@
           <div id="agent-nodes-list" class="agent-nodes-stack"></div>
         </aside>
 
+        <!-- Columna 2: Constructor del Sub-Agente -->
         <section class="workspace-card scrollable-card">
           <div class="card-header-bar">
             <div>
@@ -473,6 +488,7 @@
           </form>
         </section>
 
+        <!-- Columna 3: IDE de Acciones de Código JS con Snippets y Diff de Estado -->
         <section class="workspace-card code-ide-card">
           <div class="card-header-bar">
             <div>
@@ -496,6 +512,15 @@
             </div>
           </div>
 
+          <!-- Barra de Snippets de Ingeniería en 1 Clic -->
+          <div class="var-chips-strip">
+            <span class="pill-mono">Inyectar Snippet:</span>
+            <button type="button" class="snippet-chip" data-snippet="trace">+ api.trace(REST)</button>
+            <button type="button" class="snippet-chip" data-snippet="bonus">+ Bono Extra 10%</button>
+            <button type="button" class="snippet-chip" data-snippet="fx">+ Conversión USD</button>
+            <button type="button" class="snippet-chip" data-snippet="pause">+ Pausar Discador</button>
+          </div>
+
           <div class="code-signature-bar">
             <code>async function runCodeAction(state, input, country, client, api) {</code>
           </div>
@@ -507,23 +532,23 @@
           </div>
 
           <div class="field-row-2">
-            <button type="button" id="btn-run-action-test" class="btn-ghost-sm">▶ Ejecutar Dry-Run (Consola)</button>
+            <button type="button" id="btn-run-action-test" class="btn-ghost-sm">▶ Ejecutar Dry-Run + Ver Diff</button>
             <button type="button" id="btn-save-action" class="btn-primary-action">Publicar Código en el Bot</button>
           </div>
 
           <div class="ide-console-box">
             <div class="label-row-between">
-              <span class="subcard-title">Consola de Salida &amp; Mutación de Sesión</span>
+              <span class="subcard-title">Consola VM &amp; Diff de Mutación de Estado (`state.*`)</span>
               <span id="ca-exec-time" class="pill-mono">Listo</span>
             </div>
-            <pre id="ca-console-output" class="code-viewer-pre compact-console-pre">// Hacé clic en "▶ Ejecutar Dry-Run" para probar el código JS contra el estado actual de sesión.</pre>
+            <pre id="ca-console-output" class="code-viewer-pre compact-console-pre">// Hacé clic en "▶ Ejecutar Dry-Run + Ver Diff" para ejecutar en Node.js VM y ver qué variables mutaron.</pre>
           </div>
         </section>
       </div>
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 03: INGESTA E.164, CONVERSIÓN USD Y SEGMENTACIÓN DE PADRÓN    -->
+    <!-- PÁGINA 03: INGESTA E.164, CONVERSIÓN USD Y DESPACHO BATCH            -->
     <!-- =================================================================== -->
     <section id="tab-portfolio" class="stage-page">
       <div class="page-workspace portfolio-workspace">
@@ -543,7 +568,7 @@
             </div>
           </div>
 
-          <textarea id="pf-raw-editor" class="code-editor-area" rows="10" spellcheck="false"></textarea>
+          <textarea id="pf-raw-editor" class="code-editor-area" rows="9" spellcheck="false"></textarea>
 
           <div class="subcard-block">
             <div class="subcard-title">Política de Beneficios por Tramo de Mora</div>
@@ -572,12 +597,17 @@
             </div>
           </div>
 
-          <button id="btn-validate-portfolio" class="btn-primary-action full-width">
-            Ejecutar Sanitización E.164, Filtro DNC y Valuación USD
-          </button>
+          <div class="field-row-2">
+            <button id="btn-validate-portfolio" class="btn-primary-action">
+              1. Sanitizar E.164 &amp; Valuar USD
+            </button>
+            <button id="btn-dispatch-batch" class="btn-ghost-sm">
+              ▶ 2. Simular Despacho Batch HSM
+            </button>
+          </div>
 
           <form id="add-debtor-form" class="subcard-block clean-form">
-            <div class="subcard-title">Inyectar Registro de Prueba al Lote</div>
+            <div class="subcard-title">Inyectar o Corregir Registro en el Lote</div>
             <div class="field-row-2">
               <input type="text" id="add-name" placeholder="Nombre y Apellido" required />
               <select id="add-country"></select>
@@ -592,7 +622,7 @@
                 <input type="checkbox" id="add-dnc" />
                 <span>Incluir en lista No Llame (DNC)</span>
               </label>
-              <button type="submit" class="btn-ghost-sm">+ Agregar y Validar</button>
+              <button type="submit" class="btn-ghost-sm">+ Inyectar y Re-Validar</button>
             </div>
           </form>
         </div>
@@ -620,10 +650,11 @@
           <div class="workspace-card table-workspace-card flex-grow-card">
             <div class="card-header-bar">
               <div>
-                <span class="eyebrow-tag">PADRONIZACIÓN E.164 &amp; EQUIVALENCIA FX</span>
+                <span class="eyebrow-tag">PADRONIZACIÓN E.164, EQUIVALENCIA FX &amp; DESPACHO</span>
                 <h2>Cartera Lista para Despacho Outbound</h2>
               </div>
               <div class="btn-group-inline">
+                <span id="batch-dispatch-summary" class="status-pill pill-indigo" style="display:none;"></span>
                 <input type="search" id="pf-search" class="input-search-sm" placeholder="Filtrar por nombre, país o tramo..." />
                 <button id="btn-export-csv" class="btn-ghost-sm">Exportar CSV</button>
               </div>
@@ -637,8 +668,8 @@
                     <th>País &amp; Hora</th>
                     <th>Teléfono E.164</th>
                     <th>Saldo Local &amp; USD</th>
-                    <th>Segmento</th>
-                    <th>Política Asignada</th>
+                    <th>Segmento &amp; Quita</th>
+                    <th>Estado Despacho</th>
                     <th>Acción</th>
                   </tr>
                 </thead>
@@ -650,7 +681,7 @@
           <div class="workspace-card table-workspace-card compact-rejected-card">
             <div class="card-header-bar">
               <div>
-                <span class="eyebrow-tag">AUDITORÍA DE EXCLUSIÓN</span>
+                <span class="eyebrow-tag">AUDITORÍA DE EXCLUSIÓN CON REPARACIÓN EN 1 CLIC</span>
                 <h2>Registros Retenidos por Guardrails Pre-Llamada</h2>
               </div>
               <span id="pf-time" class="pill-mono">0 ms</span>
@@ -665,6 +696,7 @@
                     <th>Dato Crudo</th>
                     <th>Código Bloqueo</th>
                     <th>Motivo de Retención</th>
+                    <th>Acción</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -676,7 +708,7 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 04: SANDBOX MULTI-AGENTE, TURF.JS & INSPECTOR ANTI-LOOP       -->
+    <!-- PÁGINA 04: SANDBOX MULTI-AGENTE, RADAR TURF.JS & INSPECTOR           -->
     <!-- =================================================================== -->
     <section id="tab-simulator" class="stage-page active">
       <div class="page-workspace simulator-workspace">
@@ -686,7 +718,10 @@
               <span class="eyebrow-tag">PARÁMETROS DE RUNTIME</span>
               <h2>Contexto de Sesión</h2>
             </div>
-            <button id="btn-reset-session" class="btn-ghost-sm" title="Reiniciar estado de sesión">Reiniciar</button>
+            <div class="btn-group-inline">
+              <button id="btn-export-transcript" class="btn-ghost-sm btn-xs" title="Descargar transcripción y trazas JSON">Exportar Log</button>
+              <button id="btn-reset-session" class="btn-ghost-sm btn-xs" title="Reiniciar estado de sesión">Reiniciar</button>
+            </div>
           </div>
 
           <div class="clean-form">
@@ -695,7 +730,6 @@
               <select id="sim-country"></select>
             </div>
 
-            <!-- Tarjeta de Hora Real del Cliente + Equivalencia FX en el País Seleccionado -->
             <div class="subcard-block sim-live-country-box">
               <div class="label-row-between">
                 <span>Hora Real en <strong id="sim-live-country-name">Argentina</strong>:</span>
@@ -732,7 +766,7 @@
             <div class="subcard-block">
               <div class="label-row-between">
                 <span class="subcard-title">Geolocalización Cobro Presencial (Turf.js)</span>
-                <span class="pill-mono">GPS</span>
+                <button type="button" id="btn-use-browser-gps" class="btn-ghost-sm btn-xs" title="Obtener coordenadas reales del navegador">📍 Mi GPS Real</button>
               </div>
               <div class="field-row-2">
                 <div class="field-group">
@@ -776,7 +810,7 @@
                 </button>
                 <button type="button" class="scenario-item" data-msg="Prefiero pagar en efectivo por ventanilla, ¿qué sucursal tengo más cerca?">
                   <span class="scenario-tag">TURF</span>
-                  <span>Sucursal cercana (@turf/turf + Token)</span>
+                  <span>Sucursal cercana (@turf/turf + Radar)</span>
                 </button>
                 <button type="button" class="scenario-item" data-msg="Olá, falo português, quero negociar minha fatura e pagar com desconto">
                   <span class="scenario-tag">ES↔PT</span>
@@ -791,6 +825,7 @@
           </div>
         </aside>
 
+        <!-- Panel Central: Terminal Conversacional WhatsApp / Callbot -->
         <section class="workspace-card chat-terminal-card">
           <div class="chat-terminal-header">
             <div class="chat-terminal-identity">
@@ -806,6 +841,7 @@
               </div>
             </div>
             <div class="chat-terminal-badges">
+              <span id="callbot-wave-pill" class="status-pill pill-emerald" style="display:none;">🔊 Callbot Hablando...</span>
               <span id="chat-agent-badge" class="status-pill pill-indigo">SupportTriageAgent</span>
               <span id="chat-lang-badge" class="pill-mono">ES</span>
             </div>
@@ -832,15 +868,18 @@
           </form>
         </section>
 
+        <!-- Panel Derecho: Inspector de Ingeniería (4 Vistas: Estado & Diff, Radar Turf.js, Trazas API, Prompt) -->
         <aside class="workspace-card inspector-panel">
           <div class="inspector-header">
             <div class="segmented-control">
-              <button type="button" class="seg-btn active" data-itab="state">Estado &amp; Anti-Loop</button>
-              <button type="button" class="seg-btn" data-itab="traces">Trazas &amp; Code Actions</button>
-              <button type="button" class="seg-btn" data-itab="prompt">System Prompt</button>
+              <button type="button" class="seg-btn active" data-itab="state">Estado &amp; Diff</button>
+              <button type="button" class="seg-btn" data-itab="radar">Radar Turf.js</button>
+              <button type="button" class="seg-btn" data-itab="traces">Trazas API</button>
+              <button type="button" class="seg-btn" data-itab="prompt">Prompt</button>
             </div>
           </div>
 
+          <!-- Sub-vista 1: Estado, Variables Mutadas y Anti-Loop -->
           <div id="itab-state" class="inspector-body active">
             <div class="inspector-metrics-row">
               <div class="inspector-stat">
@@ -854,14 +893,28 @@
             </div>
 
             <div class="inspector-Action-strip">
-              <span class="subcard-title">JSON de Sesión + Variables de Code Actions</span>
-              <button type="button" id="btn-force-loop-test" class="btn-ghost-sm" title="Simular exceso de rebotes (>3 hops) para verificar circuit-breaker">
+              <span class="subcard-title">Variables Mutadas en el Turno (`Diff`)</span>
+              <button type="button" id="btn-force-loop-test" class="btn-ghost-sm btn-xs" title="Simular exceso de rebotes (>3 hops) para verificar circuit-breaker">
                 Probar Circuit-Breaker (&gt;3 Hops)
               </button>
             </div>
+
+            <div id="state-diff-badges" class="state-diff-grid"></div>
+
             <pre id="state-json-viewer" class="code-viewer-pre"></pre>
           </div>
 
+          <!-- Sub-vista 2: Radar Geodésico Interactivo @turf/turf -->
+          <div id="itab-radar" class="inspector-body">
+            <div class="inspector-Action-strip">
+              <span class="subcard-title">Radar Geodésico `@turf/turf` ($0 API Cost)</span>
+              <span id="radar-origin-label" class="pill-mono">Lat/Lng</span>
+            </div>
+            <div id="turf-radar-container" class="turf-radar-box"></div>
+            <div id="turf-branches-cards" class="api-trace-stack"></div>
+          </div>
+
+          <!-- Sub-vista 3: Trazas REST API & Ejecución JS -->
           <div id="itab-traces" class="inspector-body">
             <div class="inspector-Action-strip">
               <span class="subcard-title">Ejecución de Microservicios &amp; Scripts JS</span>
@@ -871,6 +924,7 @@
             <pre id="api-traces-viewer" class="code-viewer-pre"></pre>
           </div>
 
+          <!-- Sub-vista 4: System Prompt Compilado -->
           <div id="itab-prompt" class="inspector-body">
             <div class="inspector-Action-strip">
               <span class="subcard-title">Prompt Inyectado en Runtime</span>
@@ -883,7 +937,7 @@
     </section>
 
     <!-- =================================================================== -->
-    <!-- PÁGINA 05: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN                    -->
+    <!-- PÁGINA 05: SUITE DE 30+ CASOS DE QA PRE-PRODUCCIÓN                   -->
     <!-- =================================================================== -->
     <section id="tab-qa" class="stage-page">
       <div class="page-workspace qa-workspace">
@@ -891,21 +945,22 @@
           <div class="card-header-bar">
             <div>
               <span class="eyebrow-tag">ETAPA 05 · CERTIFICACIÓN PRE-PRODUCCIÓN</span>
-              <h2>Batería Automatizada de 30 Casos de QA</h2>
+              <h2>Batería Automatizada de Casos de QA</h2>
             </div>
             <div class="btn-group-inline">
               <div id="qa-summary-pills" class="qa-summary-inline"></div>
-              <button id="btn-run-qa" class="btn-primary-action">Ejecutar 30 Casos Ahora</button>
+              <button id="btn-export-qa-report" class="btn-ghost-sm">Descargar Certificado QA</button>
+              <button id="btn-run-qa" class="btn-primary-action">Ejecutar Suite Ahora</button>
             </div>
           </div>
 
           <div class="qa-filter-strip">
-            <button class="qa-filter-btn active" data-cat="ALL">Todos (30)</button>
-            <button class="qa-filter-btn" data-cat="Ruteo & Anti-Loop">Ruteo &amp; Anti-Loop (6)</button>
-            <button class="qa-filter-btn" data-cat="Geolocalización Turf.js">Geolocalización Turf.js (6)</button>
-            <button class="qa-filter-btn" data-cat="Negociación & APIs">Negociación &amp; APIs (6)</button>
-            <button class="qa-filter-btn" data-cat="Guardrails & Compliance">Guardrails &amp; Compliance (6)</button>
-            <button class="qa-filter-btn" data-cat="Handoff & 13 Países">Handoff &amp; 13 Países (6)</button>
+            <button class="qa-filter-btn active" data-cat="ALL">Todos</button>
+            <button class="qa-filter-btn" data-cat="Ruteo & Anti-Loop">Ruteo &amp; Anti-Loop</button>
+            <button class="qa-filter-btn" data-cat="Geolocalización Turf.js">Geolocalización Turf.js</button>
+            <button class="qa-filter-btn" data-cat="Negociación & APIs">Negociación &amp; APIs</button>
+            <button class="qa-filter-btn" data-cat="Guardrails & Compliance">Guardrails &amp; Compliance</button>
+            <button class="qa-filter-btn" data-cat="Handoff & 13 Países">Handoff &amp; 13 Países</button>
           </div>
 
           <div class="table-container-scroll">
@@ -938,7 +993,7 @@
             </button>
           </div>
 
-          <p id="qa-detail-title" class="card-helper">Hacé clic en cualquiera de las 30 filas para inspeccionar su payload de entrada, las aserciones evaluadas y la respuesta del motor.</p>
+          <p id="qa-detail-title" class="card-helper">Hacé clic en cualquiera de las filas para inspeccionar su payload de entrada, las aserciones evaluadas y la respuesta del motor.</p>
 
           <div class="subcard-block">
             <span class="subcard-title">Aserciones Verificadas</span>
@@ -954,6 +1009,18 @@
             <span class="subcard-title">Respuesta Generada (`reply`)</span>
             <pre id="qa-detail-reply" class="code-viewer-pre prompt-pre compact-pre"></pre>
           </div>
+
+          <!-- Creador de Nuevo Caso QA en Vivo -->
+          <form id="add-qa-form" class="subcard-block clean-form">
+            <div class="subcard-title">+ Agregar Nuevo Caso de Regresión a la Suite</div>
+            <input type="text" id="qa-new-title" placeholder="Título (ej: Validación de comprobante bancario)" required />
+            <div class="field-row-2">
+              <select id="qa-new-country"></select>
+              <select id="qa-new-agent"></select>
+            </div>
+            <input type="text" id="qa-new-msg" placeholder="Mensaje del cliente (ej: Ya pagué por transferencia)" required />
+            <button type="submit" class="btn-primary-action btn-xs full-width">+ Inyectar Caso QA y Ejecutar Suite</button>
+          </form>
         </aside>
       </div>
     </section>

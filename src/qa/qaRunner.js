@@ -1,5 +1,5 @@
 /**
- * Módulo 4: Batería de 30 Casos de QA para Validación Pre-Producción de Agentes de IA
+ * Módulo 4: Batería de 30+ Casos de QA para Validación Pre-Producción de Agentes de IA
  * Evalúa regresión en ruteo multi-país (13 países), sanitización anti-loop en cambio de idioma,
  * cálculo geodésico con Turf.js, registro de promesas de pago, cumplimiento horario y guardrails.
  */
@@ -47,6 +47,38 @@ export const QA_TEST_CASES = [
   { id: 'QA-30', category: 'Handoff & 13 Países', title: 'Operación regional en Guatemala (GTQ)', input: { countryCode: 'GT', message: 'Consultar cuota vencida' }, expect: { routedTo: 'CollectionsNegotiationAgent', currency: 'GTQ' } }
 ];
 
+export function addCustomQaCase(payload = {}) {
+  const nextNum = QA_TEST_CASES.length + 1;
+  const id = payload.id || `QA-${String(nextNum).padStart(2, '0')}`;
+  const newCase = {
+    id,
+    category: payload.category || 'Ruteo & Anti-Loop',
+    title: payload.title || `Caso de regresión personalizado #${nextNum}`,
+    input: {
+      countryCode: payload.countryCode || 'AR',
+      message: payload.message || 'Ya pagué por transferencia y tengo el comprobante',
+      simulatedHour: Number(payload.simulatedHour ?? 14),
+      sessionState: payload.sessionState || {}
+    },
+    expect: {
+      routedTo: payload.expectedAgent || 'ReceiptValidationAgent'
+    }
+  };
+  QA_TEST_CASES.push(newCase);
+  return newCase;
+}
+
+function buildAssertion(name, expected, actual, ok) {
+  return {
+    name,
+    expected: String(expected),
+    actual: String(actual),
+    ok: Boolean(ok),
+    check: `${name} === ${expected}`,
+    pass: Boolean(ok)
+  };
+}
+
 export function runQaSuite() {
   const startSuite = performance.now();
   const results = [];
@@ -58,39 +90,41 @@ export function runQaSuite() {
 
     const checks = [];
     if (tc.expect.routedTo) {
-      checks.push({ check: `routedTo === ${tc.expect.routedTo}`, pass: out.routedTo === tc.expect.routedTo, actual: out.routedTo });
+      checks.push(buildAssertion('routedTo', tc.expect.routedTo, out.routedTo, out.routedTo === tc.expect.routedTo));
     }
     if (tc.expect.intent) {
-      checks.push({ check: `intent === ${tc.expect.intent}`, pass: out.intent === tc.expect.intent, actual: out.intent });
+      checks.push(buildAssertion('intent', tc.expect.intent, out.intent, out.intent === tc.expect.intent));
     }
     if (tc.expect.language) {
-      checks.push({ check: `language === ${tc.expect.language}`, pass: out.language === tc.expect.language, actual: out.language });
+      checks.push(buildAssertion('language', tc.expect.language, out.language, out.language === tc.expect.language));
     }
     if (typeof tc.expect.loopPrevented === 'boolean') {
-      checks.push({ check: `loopPrevented === ${tc.expect.loopPrevented}`, pass: Boolean(out.sessionState?.loopPrevented) === tc.expect.loopPrevented, actual: Boolean(out.sessionState?.loopPrevented) });
+      const actualLoop = Boolean(out.sessionState?.loopPrevented);
+      checks.push(buildAssertion('loopPrevented', tc.expect.loopPrevented, actualLoop, actualLoop === tc.expect.loopPrevented));
     }
     if (tc.expect.currency) {
-      checks.push({ check: `currency === ${tc.expect.currency}`, pass: out.sessionState?.currency === tc.expect.currency, actual: out.sessionState?.currency });
+      checks.push(buildAssertion('currency', tc.expect.currency, out.sessionState?.currency, out.sessionState?.currency === tc.expect.currency));
     }
     if (tc.expect.nearestBranchId) {
       const actualTop = out.toolOutput?.nearestBranches?.[0]?.id;
-      checks.push({ check: `nearestBranch === ${tc.expect.nearestBranchId}`, pass: actualTop === tc.expect.nearestBranchId, actual: actualTop });
+      checks.push(buildAssertion('nearestBranchId', tc.expect.nearestBranchId, actualTop, actualTop === tc.expect.nearestBranchId));
     }
     if (tc.expect.zeroApiCost) {
-      checks.push({ check: 'externalApiCostUsd === 0', pass: out.toolOutput?.externalApiCostUsd === 0, actual: out.toolOutput?.externalApiCostUsd });
+      checks.push(buildAssertion('externalApiCostUsd', 0, out.toolOutput?.externalApiCostUsd, out.toolOutput?.externalApiCostUsd === 0));
     }
     if (tc.expect.hasWhatsAppList) {
-      checks.push({ check: 'whatsappInteractiveList generated', pass: Array.isArray(out.toolOutput?.whatsappInteractiveList?.rows), actual: out.toolOutput?.whatsappInteractiveList?.rows?.length });
+      const rowsLen = out.toolOutput?.whatsappInteractiveList?.rows?.length || 0;
+      checks.push(buildAssertion('whatsappListRows', '>= 1', rowsLen, rowsLen >= 1));
     }
     if (tc.expect.apiCalled) {
       const called = out.apiTraces.some(a => a.endpoint.includes(tc.expect.apiCalled));
-      checks.push({ check: `API called: ${tc.expect.apiCalled}`, pass: called, actual: out.apiTraces.map(a => a.endpoint).join(', ') });
+      checks.push(buildAssertion('apiTraceEndpoint', tc.expect.apiCalled, out.apiTraces.map(a => a.endpoint).join(', '), called));
     }
     if (tc.expect.hasPromiseId) {
-      checks.push({ check: 'paymentPromiseId registered', pass: Boolean(out.sessionState?.paymentPromiseId), actual: out.sessionState?.paymentPromiseId });
+      checks.push(buildAssertion('paymentPromiseId', 'PRM-*', out.sessionState?.paymentPromiseId || 'none', Boolean(out.sessionState?.paymentPromiseId)));
     }
     if (tc.expect.hasHandoffTicket) {
-      checks.push({ check: 'handoffTicket generated', pass: Boolean(out.sessionState?.handoffTicket), actual: out.sessionState?.handoffTicket });
+      checks.push(buildAssertion('handoffTicket', 'HND-*', out.sessionState?.handoffTicket || 'none', Boolean(out.sessionState?.handoffTicket)));
     }
 
     const passed = checks.every(c => c.pass);
@@ -98,6 +132,8 @@ export function runQaSuite() {
       id: tc.id,
       category: tc.category,
       title: tc.title,
+      countryCode: tc.input.countryCode || 'AR',
+      language: out.language || 'es',
       passed,
       durationMs,
       routedTo: out.routedTo,
@@ -111,12 +147,17 @@ export function runQaSuite() {
 
   const totalDurationMs = Number((performance.now() - startSuite).toFixed(2));
   const passedCount = results.filter(r => r.passed).length;
+  const passRatePct = Math.round((passedCount / results.length) * 100);
 
   return {
+    total: results.length,
     totalCases: results.length,
+    passed: passedCount,
     passedCount,
     failedCount: results.length - passedCount,
-    passRatePct: Math.round((passedCount / results.length) * 100),
+    passRate: passRatePct,
+    passRatePct,
+    executionTimeMs: totalDurationMs,
     totalDurationMs,
     results
   };

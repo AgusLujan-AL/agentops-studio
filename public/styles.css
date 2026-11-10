@@ -1784,3 +1784,142 @@ body.light-theme .wa-row-btn:hover { color: #fff; background: #2563eb; }
   font-family: var(--font-mono) !important;
   text-align: right;
 }
+
+
+/* ========================================================================= */
+/* MEJORAS v4.5: LÍNEA 24H, PROBADOR DE RUTEO, DIFF DE ESTADO Y RADAR TURF   */
+/* ========================================================================= */
+.segmented-control {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.timeline-24h-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 145px;
+}
+
+.timeline-24h-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(244, 63, 94, 0.16);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.timeline-24h-window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(16, 185, 129, 0.45);
+  border-left: 1px solid var(--emerald);
+  border-right: 1px solid var(--emerald);
+}
+
+.timeline-24h-cursor {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 3px;
+  background: #fff;
+  box-shadow: 0 0 6px var(--accent);
+  border-radius: 2px;
+}
+
+body.light-theme .timeline-24h-cursor {
+  background: #0f172a;
+}
+
+.live-router-tester {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.live-route-explain {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.agent-node-card.route-matched {
+  border-color: var(--emerald) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25), inset 3px 0 0 var(--emerald) !important;
+}
+
+.snippet-chip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+
+.snippet-chip:hover {
+  border-color: var(--emerald);
+  color: var(--emerald);
+}
+
+.state-diff-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.diff-pill-card {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diff-pill-card.mutated {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: var(--emerald-soft);
+}
+
+.diff-key {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.diff-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.turf-radar-box {
+  height: 225px;
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.08), var(--bg-canvas) 75%);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.turf-radar-svg {
+  width: 100%;
+  height: 100%;
+}

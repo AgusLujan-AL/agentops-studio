@@ -1,12 +1,16 @@
 let countriesMeta = {};
 let defaultCoordsByCountry = {};
 let clientPresets = {};
+let branchesCatalog = {};
 let samplePortfolio = [];
 let agentFlowNodes = {};
 let codeActions = {};
 let selectedAgentId = 'CollectionsNegotiationAgent';
 let selectedActionId = 'action_calc_quita';
 let sessionState = {};
+let previousSessionState = {};
+let conversationTranscript = [];
+let batchDispatchMap = {};
 let customClientConfig = null;
 let callbotVoiceEnabled = false;
 let livePromisesCount = 0;
@@ -19,7 +23,7 @@ let currentStage = 'simulator';
 const STAGE_META = {
   onboarding: {
     step: 'ETAPA 01 / 05',
-    title: 'Reglas, Husos Horarios en Vivo & Tasas FX (13 Países)',
+    title: 'Reglas, Husos Horarios 24h & Tasas FX (13 Países)',
     desc: 'Configuración de políticas de quita, reloj actual de los clientes por país, tipos de cambio y ventanas legales.',
     nextStage: 'builder',
     nextLabel: 'Ir a Etapa 02: Flujo & Código JS'
@@ -27,31 +31,38 @@ const STAGE_META = {
   builder: {
     step: 'ETAPA 02 / 05',
     title: 'Flujo de Creación de Agentes & IDE de Acciones de Código JS',
-    desc: 'Diseñá sub-agentes, configurá disparadores y programá Code Actions en JavaScript que modifican al bot en vivo.',
+    desc: 'Probador de ruteo en vivo, diseño de sub-agentes y programación de Code Actions en Node.js VM.',
     nextStage: 'portfolio',
     nextLabel: 'Ir a Etapa 03: Ingesta E.164'
   },
   portfolio: {
     step: 'ETAPA 03 / 05',
-    title: 'Ingesta E.164, Valuación en USD & Segmentación de Cartera',
-    desc: 'Normalización telefónica internacional, bloqueo DNC, conversión multimoneda a USD y asignación de oferta.',
+    title: 'Ingesta E.164, Valuación USD & Despacho Batch',
+    desc: 'Normalización telefónica internacional, bloqueo DNC, reparación de errores y despacho masivo outbound.',
     nextStage: 'simulator',
     nextLabel: 'Ir a Etapa 04: Sandbox IA'
   },
   simulator: {
     step: 'ETAPA 04 / 05',
-    title: 'Sandbox Multi-Agente, Cobro Presencial Turf.js & Inspector',
+    title: 'Sandbox Multi-Agente, Radar Turf.js & Diff de Estado',
     desc: 'Prueba conversacional en vivo reflejando tus cambios de Agentes, Code Actions JS, Cartera y Reglas.',
     nextStage: 'qa',
-    nextLabel: 'Ir a Etapa 05: Gate QA (30)'
+    nextLabel: 'Ir a Etapa 05: Gate QA'
   },
   qa: {
     step: 'ETAPA 05 / 05',
-    title: 'Certificación Pre-Producción (Suite de 30 Casos QA)',
-    desc: 'Verificación automatizada de ruteo bilingüe ES/PT, precisión geodésica Turf.js y guardrails de seguridad.',
+    title: 'Certificación Pre-Producción (Suite Automatizada QA)',
+    desc: 'Verificación de ruteo bilingüe ES/PT, precisión geodésica Turf.js, guardrails y creación de nuevos casos.',
     nextStage: 'onboarding',
     nextLabel: 'Volver a Etapa 01: Reglas'
   }
+};
+
+const CODE_SNIPPETS = {
+  trace: `\n// Registrar traza HTTP personalizada en el inspector\napi.trace('POST', '/api/v1/erp/custom-webhook', 200, {\n  customer: state.customerName,\n  country: state.countryCode,\n  timestamp: new Date().toISOString()\n});\n`,
+  bonus: `\n// Aplicar bonificación adicional del 10% por pago en el día\nconst bonoExtra = Math.round((state.debtAmount || 100000) * 0.10);\nstate.calculatedPayoff = Math.max(0, (state.calculatedPayoff || state.debtAmount) - bonoExtra);\napi.log('Bonificación extra aplicada: -' + bonoExtra + ' ' + country.currency);\n`,
+  fx: `\n// Calcular equivalencia exacta en dólares (USD)\nconst tasaFx = Number(country.fxPerUsd || 1);\nstate.balanceInUsd = Number(((state.debtAmount || 0) / tasaFx).toFixed(2));\napi.log('Saldo equivalente en USD: US$ ' + state.balanceInUsd);\n`,
+  pause: `\n// Pausar preventivamente llamados del discador saliente por 72h\nstate.outboundDialerPaused = true;\nstate.pauseExpiresHours = 72;\napi.log('Discador outbound pausado por 72hs para ' + state.customerName);\n`
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -80,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // =========================================================================
-// MODO OSCURO / MODO CLARO (LIGHT / DARK THEME)
+// MODO OSCURO / MODO CLARO
 // =========================================================================
 function setupThemeToggle() {
   const savedTheme = localStorage.getItem('agentops_theme') || 'dark';
@@ -109,6 +120,7 @@ function getCountryLiveTimeInfo(code) {
   const now = new Date();
   let timeStr = '14:00:00';
   let hourNum = 14;
+  let minNum = 0;
 
   try {
     const parts = new Intl.DateTimeFormat('es-AR', {
@@ -123,20 +135,24 @@ function getCountryLiveTimeInfo(code) {
     const mm = parts.find(p => p.type === 'minute')?.value || '00';
     const ss = parts.find(p => p.type === 'second')?.value || '00';
     hourNum = Number(hh) % 24;
+    minNum = Number(mm) % 60;
     timeStr = `${String(hourNum).padStart(2, '0')}:${mm}:${ss}`;
   } catch {
     const utcHour = now.getUTCHours();
     hourNum = (utcHour + (c.tzOffset || -3) + 24) % 24;
-    const mm = String(now.getUTCMinutes()).padStart(2, '0');
+    minNum = now.getUTCMinutes();
+    const mm = String(minNum).padStart(2, '0');
     const ss = String(now.getUTCSeconds()).padStart(2, '0');
     timeStr = `${String(hourNum).padStart(2, '0')}:${mm}:${ss}`;
   }
 
   const isOpen = hourNum >= c.windowStart && hourNum < c.windowEnd;
+  const dayPct = Math.min(100, Math.max(0, ((hourNum + minNum / 60) / 24) * 100));
   return {
     timeStr,
     shortTime: timeStr.slice(0, 5),
     hourNum,
+    dayPct,
     isOpen
   };
 }
@@ -150,12 +166,7 @@ function convertCurrencyAmount(amount, fromKey, toKey) {
   const toRate = getRatePerUsd(toKey);
   const amountInUsd = amount / fromRate;
   const converted = amountInUsd * toRate;
-  return {
-    converted,
-    amountInUsd,
-    fromRate,
-    toRate
-  };
+  return { converted, amountInUsd, fromRate, toRate };
 }
 
 function setupFxAndClockDrawer() {
@@ -191,11 +202,9 @@ function setupFxAndClockDrawer() {
     document.getElementById('fx-converted-main').textContent =
       `${toCurr} ${converted.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    if (fromKey === 'USD') {
-      document.getElementById('fx-rate-detail').textContent = `1 USD = ${toRate} ${toCurr}`;
-    } else {
-      document.getElementById('fx-rate-detail').textContent = `1 USD = ${fromRate} ${fromCurr}`;
-    }
+    document.getElementById('fx-rate-detail').textContent = fromKey === 'USD'
+      ? `1 USD = ${toRate} ${toCurr}`
+      : `1 USD = ${fromRate} ${fromCurr}`;
 
     renderLiveClocksDrawerGrid();
   };
@@ -267,7 +276,7 @@ function renderLiveClocksDrawerGrid() {
       <div class="clock-card-mid">
         <span>Ventana: ${String(c.windowStart).padStart(2, '0')}:00–${String(c.windowEnd).padStart(2, '0')}:00</span>
         <span class="status-pill ${tInfo.isOpen ? 'pill-emerald' : 'pill-rose'}" data-live-status="${code}">
-          ${tInfo.isOpen ? 'Abierta' : 'Fuera de Hora'}
+          ${tInfo.isOpen ? 'Abierta' : 'Cerrada'}
         </span>
       </div>
       <div class="clock-card-bottom">
@@ -304,7 +313,6 @@ function startLiveClocksInterval() {
       simClock.textContent = `${activeTime.timeStr} (${countriesMeta[activeCountry]?.tz || 'UTC-3'})`;
     }
 
-    // Actualizar todos los relojes en vivo de las tablas y del drawer
     Object.keys(countriesMeta).forEach(code => {
       const info = getCountryLiveTimeInfo(code);
       document.querySelectorAll(`[data-live-clock="${code}"]`).forEach(el => {
@@ -313,6 +321,9 @@ function startLiveClocksInterval() {
       document.querySelectorAll(`[data-live-status="${code}"]`).forEach(el => {
         el.className = `status-pill ${info.isOpen ? 'pill-emerald' : 'pill-rose'}`;
         el.textContent = info.isOpen ? 'Abierta' : 'Cerrada';
+      });
+      document.querySelectorAll(`[data-live-cursor="${code}"]`).forEach(el => {
+        el.style.left = `${info.dayPct}%`;
       });
     });
   };
@@ -327,14 +338,17 @@ async function loadInitialConfig() {
   countriesMeta = data.countries || {};
   defaultCoordsByCountry = data.defaultCoords || {};
   clientPresets = data.clientPresets || {};
+  branchesCatalog = data.branchesCatalog || {};
   samplePortfolio = data.samplePortfolio || [];
   agentFlowNodes = data.agentFlowNodes || {};
   codeActions = data.codeActions || {};
 
   const simCountry = document.getElementById('sim-country');
   const addCountry = document.getElementById('add-country');
+  const qaCountry = document.getElementById('qa-new-country');
   simCountry.innerHTML = '';
   addCountry.innerHTML = '';
+  if (qaCountry) qaCountry.innerHTML = '';
 
   Object.entries(countriesMeta).forEach(([code, c]) => {
     const opt = document.createElement('option');
@@ -346,6 +360,13 @@ async function loadInitialConfig() {
     opt2.value = code;
     opt2.textContent = `${code} (${c.name})`;
     addCountry.appendChild(opt2);
+
+    if (qaCountry) {
+      const opt3 = document.createElement('option');
+      opt3.value = code;
+      opt3.textContent = `${code} (${c.name})`;
+      qaCountry.appendChild(opt3);
+    }
   });
 
   document.getElementById('pf-raw-editor').value = JSON.stringify(samplePortfolio, null, 2);
@@ -438,12 +459,23 @@ function setupNavigationAndDrawer() {
 }
 
 // =========================================================================
-// ETAPA 02: FLUJO DE CREACIÓN DE AGENTES & IDE DE CODE ACTIONS JS
+// ETAPA 02: FLUJO DE CREACIÓN DE AGENTES, PROBADOR EN VIVO & IDE CODE ACTIONS
 // =========================================================================
 function updateBuilderDrawerBadge() {
   const nodesCount = Object.keys(agentFlowNodes).length;
   const actionsCount = Object.keys(codeActions).length;
   document.getElementById('nav-builder-badge').textContent = `${nodesCount} Nodos · ${actionsCount} JS`;
+
+  const qaAgentSelect = document.getElementById('qa-new-agent');
+  if (qaAgentSelect) {
+    qaAgentSelect.innerHTML = '';
+    Object.values(agentFlowNodes).forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = n.id;
+      qaAgentSelect.appendChild(opt);
+    });
+  }
 }
 
 function renderBuilderView() {
@@ -454,13 +486,14 @@ function renderBuilderView() {
   loadActionIntoEditor(selectedActionId);
 }
 
-function renderAgentNodesStack() {
+function renderAgentNodesStack(matchedAgentId = null) {
   const container = document.getElementById('agent-nodes-list');
   container.innerHTML = '';
 
   Object.values(agentFlowNodes).forEach(node => {
     const div = document.createElement('div');
-    div.className = `agent-node-card ${node.id === selectedAgentId ? 'active' : ''}`;
+    const isMatched = matchedAgentId && node.id === matchedAgentId;
+    div.className = `agent-node-card ${node.id === selectedAgentId ? 'active' : ''} ${isMatched ? 'route-matched' : ''}`;
     const actionObj = codeActions[node.codeActionId];
     const actionLabel = actionObj ? `⚡ ${actionObj.name}` : 'Sin Code Action';
     const kwPreview = (node.keywords || []).slice(0, 4).join(', ');
@@ -468,7 +501,9 @@ function renderAgentNodesStack() {
     div.innerHTML = `
       <div class="agent-node-header">
         <strong>${node.id}</strong>
-        <span class="status-pill ${node.isCustom ? 'pill-amber' : 'pill-indigo'}">${node.isCustom ? 'Custom' : 'Core'}</span>
+        <span class="status-pill ${isMatched ? 'pill-emerald' : (node.isCustom ? 'pill-amber' : 'pill-indigo')}">
+          ${isMatched ? 'MATCH EN VIVO' : (node.isCustom ? 'Custom' : 'Core')}
+        </span>
       </div>
       <div class="agent-node-role">${node.role}</div>
       <div class="agent-node-footer">
@@ -479,7 +514,7 @@ function renderAgentNodesStack() {
 
     div.addEventListener('click', () => {
       selectedAgentId = node.id;
-      renderAgentNodesStack();
+      renderAgentNodesStack(matchedAgentId);
       loadAgentIntoForm(node.id);
       if (node.codeActionId && codeActions[node.codeActionId]) {
         selectedActionId = node.codeActionId;
@@ -602,6 +637,29 @@ async function saveCurrentCodeAction() {
 }
 
 function setupBuilderAndCodeActions() {
+  // Probador Instantáneo de Ruteo en Tiempo Real (Live Utterance Tester)
+  const testInput = document.getElementById('builder-test-utterance');
+  testInput.addEventListener('input', async () => {
+    const msg = testInput.value.trim();
+    if (!msg) {
+      document.getElementById('live-route-badge').textContent = 'SupportTriageAgent';
+      document.getElementById('live-route-explain').textContent = 'Tipeá arriba para ver qué nodo y qué Code Action se activan en el grafo.';
+      renderAgentNodesStack(null);
+      return;
+    }
+    const res = await fetch('/api/builder/route-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, countryCode: document.getElementById('sim-country').value || 'AR' })
+    });
+    const info = await res.json();
+    document.getElementById('live-route-badge').textContent = info.routedTo;
+    document.getElementById('live-route-explain').textContent =
+      `intent="${info.intent}" · idioma=${info.language.toUpperCase()} · CodeAction=${info.linkedCodeAction || 'ninguna'}`;
+    renderAgentNodesStack(info.routedTo);
+  });
+
+  // Insertar variables en plantilla ES
   document.querySelectorAll('.var-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const textarea = document.getElementById('ag-tpl-es');
@@ -610,6 +668,21 @@ function setupBuilderAndCodeActions() {
       textarea.value = textarea.value.slice(0, start) + v + textarea.value.slice(start);
       document.getElementById('ag-custom-reply-toggle').checked = true;
       textarea.focus();
+    });
+  });
+
+  // Insertar Snippets de Código JS en 1 clic
+  document.querySelectorAll('.snippet-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const editor = document.getElementById('ca-code-editor');
+      const snippet = CODE_SNIPPETS[chip.dataset.snippet] || '';
+      const returnIdx = editor.value.lastIndexOf('return ');
+      if (returnIdx !== -1) {
+        editor.value = editor.value.slice(0, returnIdx) + snippet + '\n' + editor.value.slice(returnIdx);
+      } else {
+        editor.value += snippet;
+      }
+      editor.focus();
     });
   });
 
@@ -713,6 +786,16 @@ return {
     }
 
     const r = data.result || {};
+    const before = data.stateBeforeSnapshot || {};
+    const after = r.mutatedState || {};
+
+    const diffLines = [];
+    Object.keys(after).forEach(k => {
+      if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) {
+        diffLines.push(`  + state.${k}: ${JSON.stringify(before[k])} -> ${JSON.stringify(after[k])}`);
+      }
+    });
+
     document.getElementById('ca-exec-time').textContent = r.executed
       ? `200 OK · ${r.executionTimeMs} ms`
       : `ERROR · ${r.executionTimeMs} ms`;
@@ -721,11 +804,11 @@ return {
       `// [VM Execution: ${r.actionName}] — Status: ${r.executed ? 'SUCCESS' : 'FAILED'}`,
       ...(r.logs || []).map(l => `> ${l}`),
       '',
-      '// [Return Output]:',
-      JSON.stringify(r.output, null, 2),
+      '// [State Mutations (Antes -> Después)]:',
+      ...(diffLines.length ? diffLines : ['  (Sin mutaciones en state.*)']),
       '',
-      '// [Generated API Traces]:',
-      JSON.stringify(r.traces, null, 2)
+      '// [Return Output]:',
+      JSON.stringify(r.output, null, 2)
     ];
     document.getElementById('ca-console-output').textContent = consoleLines.join('\n');
   });
@@ -757,11 +840,15 @@ function speakCallbotReply(text, langCode = 'es') {
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = langCode === 'pt' ? 'pt-BR' : 'es-MX';
   utterance.rate = 1.05;
+  const wavePill = document.getElementById('callbot-wave-pill');
+  if (wavePill) wavePill.style.display = 'inline-flex';
+  utterance.onend = () => { if (wavePill) wavePill.style.display = 'none'; };
+  utterance.onerror = () => { if (wavePill) wavePill.style.display = 'none'; };
   window.speechSynthesis.speak(utterance);
 }
 
 // =========================================================================
-// ETAPA 04: SANDBOX MULTI-AGENTE + TURF.JS + INSPECTOR ANTI-LOOP
+// ETAPA 04: SANDBOX MULTI-AGENTE, RADAR TURF.JS & DIFF DE ESTADO
 // =========================================================================
 function setupSimulatorControls() {
   const countrySelect = document.getElementById('sim-country');
@@ -775,6 +862,7 @@ function setupSimulatorControls() {
       document.getElementById('sim-lng').value = defCoords.lng;
     }
     updateSimulatorCountryContext(code);
+    renderTurfRadar(null);
   });
 
   document.getElementById('btn-sync-real-hour').addEventListener('click', () => {
@@ -783,6 +871,39 @@ function setupSimulatorControls() {
     hourRange.value = liveInfo.hourNum;
     document.getElementById('sim-hour-badge').textContent = `${String(liveInfo.hourNum).padStart(2, '0')}:00 hs`;
     updateComplianceHint();
+  });
+
+  document.getElementById('btn-use-browser-gps').addEventListener('click', () => {
+    if (!navigator.geolocation) return;
+    const btn = document.getElementById('btn-use-browser-gps');
+    btn.textContent = 'Localizando...';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('sim-lat').value = pos.coords.latitude.toFixed(4);
+        document.getElementById('sim-lng').value = pos.coords.longitude.toFixed(4);
+        btn.textContent = '📍 GPS Activo ✓';
+        sendMessage('¿Qué sucursal tengo más cerca de mi ubicación actual?');
+      },
+      () => {
+        btn.textContent = '📍 Mi GPS Real';
+      }
+    );
+  });
+
+  document.getElementById('btn-export-transcript').addEventListener('click', () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      countryCode: countrySelect.value,
+      sessionState,
+      transcript: conversationTranscript
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agentops_session_${countrySelect.value}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
   hourRange.addEventListener('input', () => {
@@ -799,6 +920,7 @@ function setupSimulatorControls() {
         countrySelect.value = btn.dataset.country;
         updateSimulatorCountryContext(btn.dataset.country);
       }
+      renderTurfRadar(null);
     });
   });
 
@@ -858,10 +980,108 @@ function updateComplianceHint() {
     : `Fuera de horario en ${code} (${String(c.windowStart).padStart(2, '0')}:00–${String(c.windowEnd).padStart(2, '0')}:00 · ${c.regulation})`;
 }
 
+function renderStateDiffBadges(prev, curr) {
+  const container = document.getElementById('state-diff-badges');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const watchedKeys = [
+    'activeAgent',
+    'conversationStage',
+    'debtAmount',
+    'calculatedPayoff',
+    'paymentPromiseId',
+    'receiptAuditId',
+    'cashierPriorityToken',
+    'appointmentCode'
+  ];
+
+  watchedKeys.forEach(k => {
+    if (curr[k] === undefined || curr[k] === null) return;
+    const mutated = JSON.stringify(prev[k]) !== JSON.stringify(curr[k]);
+    const div = document.createElement('div');
+    div.className = `diff-pill-card ${mutated ? 'mutated' : ''}`;
+    div.innerHTML = `
+      <div class="diff-key">
+        <span>${k}</span>
+        ${mutated ? '<span class="txt-emerald">MODIFICADO</span>' : ''}
+      </div>
+      <div class="diff-val">${typeof curr[k] === 'number' ? curr[k].toLocaleString('es-AR') : String(curr[k])}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function renderTurfRadar(geoResult) {
+  const radarBox = document.getElementById('turf-radar-container');
+  const cardsBox = document.getElementById('turf-branches-cards');
+  const originLabel = document.getElementById('radar-origin-label');
+  if (!radarBox || !cardsBox) return;
+
+  const lat = parseFloat(document.getElementById('sim-lat')?.value) || -34.6667;
+  const lng = parseFloat(document.getElementById('sim-lng')?.value) || -58.7275;
+  originLabel.textContent = `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+
+  const branches = geoResult?.nearestBranches || [];
+  const maxDist = Math.max(5, ...(branches.map(b => b.distanceKm || 1)));
+
+  const pinsSvg = branches.map((b, idx) => {
+    const angleRad = ((b.bearingDeg || (idx * 110 + 45)) - 90) * (Math.PI / 180);
+    const radiusPx = Math.min(88, Math.max(22, ((b.distanceKm || 1) / maxDist) * 85));
+    const cx = Math.round(160 + radiusPx * Math.cos(angleRad));
+    const cy = Math.round(110 + radiusPx * Math.sin(angleRad));
+    return `
+      <g class="radar-branch-pin" data-branch="${b.name}" style="cursor:pointer;">
+        <line x1="160" y1="110" x2="${cx}" y2="${cy}" stroke="rgba(16, 185, 129, 0.35)" stroke-dasharray="3 3" />
+        <circle cx="${cx}" cy="${cy}" r="6" fill="#10b981" stroke="#fff" stroke-width="1.5" />
+        <text x="${cx + 9}" y="${cy + 3}" fill="#10b981" font-family="JetBrains Mono" font-size="9.5" font-weight="600">${b.id} (${b.distanceKm}km)</text>
+      </g>
+    `;
+  }).join('');
+
+  radarBox.innerHTML = `
+    <svg viewBox="0 0 320 220" class="turf-radar-svg">
+      <circle cx="160" cy="110" r="30" fill="none" stroke="rgba(255,255,255,0.08)" />
+      <circle cx="160" cy="110" r="60" fill="none" stroke="rgba(255,255,255,0.08)" />
+      <circle cx="160" cy="110" r="92" fill="none" stroke="rgba(255,255,255,0.12)" />
+      <line x1="160" y1="10" x2="160" y2="210" stroke="rgba(255,255,255,0.06)" />
+      <line x1="20" y1="110" x2="300" y2="110" stroke="rgba(255,255,255,0.06)" />
+      <text x="164" y="22" fill="#64748b" font-family="JetBrains Mono" font-size="9">N</text>
+      ${pinsSvg}
+      <circle cx="160" cy="110" r="5" fill="#3b82f6" stroke="#fff" stroke-width="2" />
+      <text x="122" y="126" fill="#93c5fd" font-family="JetBrains Mono" font-size="9">CLIENTE GPS</text>
+    </svg>
+  `;
+
+  radarBox.querySelectorAll('.radar-branch-pin').forEach(g => {
+    g.addEventListener('click', () => {
+      sendMessage(`Quiero reservar turno y código de pago en sucursal ${g.dataset.branch}`);
+    });
+  });
+
+  cardsBox.innerHTML = '';
+  if (branches.length === 0) {
+    cardsBox.innerHTML = '<div class="api-trace-pill"><span>Ejecutá el escenario <strong>TURF</strong> para graficar sucursales en el radar.</span></div>';
+    return;
+  }
+
+  branches.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'api-trace-pill';
+    div.innerHTML = `
+      <span><strong>${b.id}</strong> · ${b.name} (${b.cardinalDirection || 'N'})</span>
+      <span class="status-pill pill-emerald">${b.distanceKm} km · ~${b.estimatedWalkMin}m</span>
+    `;
+    cardsBox.appendChild(div);
+  });
+}
+
 function resetConversationSession() {
   const code = document.getElementById('sim-country')?.value || 'AR';
   const c = countriesMeta[code] || { name: 'Argentina', currency: 'ARS', lang: 'es', fxPerUsd: 1050 };
   const usdEq = (185000 / (c.fxPerUsd || 1)).toFixed(0);
+  previousSessionState = {};
+  conversationTranscript = [];
   sessionState = {
     language: c.lang,
     countryCode: code,
@@ -886,10 +1106,12 @@ function resetConversationSession() {
     [
       { label: 'Consultar deuda + Ejecutar calculateDebtQuitaAndPlan.js', msg: 'Hola, quiero consultar mi deuda pendiente y ver qué descuento tienen' },
       { label: 'Validar comprobante de transferencia (verifyPaymentReceiptOCR.js)', msg: 'Ya pagué hoy por transferencia bancaria, tengo el comprobante' },
-      { label: 'Buscar sucursal cercana para pagar en efectivo (@turf/turf)', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar por ventanilla?' }
+      { label: 'Buscar sucursal cercana en Radar (@turf/turf)', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar por ventanilla?' }
     ]
   );
 
+  renderStateDiffBadges({}, sessionState);
+  renderTurfRadar(null);
   document.getElementById('state-json-viewer').textContent = JSON.stringify(sessionState, null, 2);
   document.getElementById('api-traces-viewer').textContent = '[]';
   document.getElementById('api-cards-container').innerHTML = '';
@@ -956,6 +1178,7 @@ async function sendMessage(message) {
   const lat = parseFloat(document.getElementById('sim-lat').value);
   const lng = parseFloat(document.getElementById('sim-lng').value);
 
+  previousSessionState = JSON.parse(JSON.stringify(sessionState));
   appendChatBubble('user', message, `CLIENTE · ${countryCode} · ${String(simulatedHour).padStart(2, '0')}:00 hs`);
 
   const t0 = performance.now();
@@ -977,6 +1200,15 @@ async function sendMessage(message) {
   const roundtripMs = Math.max(1, Math.round(performance.now() - t0));
   sessionState = data.sessionState;
 
+  conversationTranscript.push({
+    timestamp: new Date().toISOString(),
+    userUtterance: message,
+    routedTo: data.routedTo,
+    intent: data.intent,
+    botReply: data.reply,
+    apiTraces: data.apiTraces
+  });
+
   if (sessionState.conversationStage === 'PROMISE_REGISTERED') {
     livePromisesCount++;
     updateFunnelCounters();
@@ -992,6 +1224,12 @@ async function sendMessage(message) {
     }));
   } else if (Array.isArray(data.toolOutput?.negotiationOptions)) {
     interactiveButtons = data.toolOutput.negotiationOptions;
+  }
+
+  if (data.toolOutput?.nearestBranches) {
+    renderTurfRadar(data.toolOutput);
+    // Activar pestaña del radar automáticamente cuando corre GeoBranchAgent
+    document.querySelector('.seg-btn[data-itab="radar"]')?.click();
   }
 
   const codeActionTag = sessionState.lastCodeAction?.actionName
@@ -1035,6 +1273,7 @@ async function sendMessage(message) {
     ? `${lastHandoff.from} → ${lastHandoff.to}`
     : `Router → ${data.routedTo}`;
 
+  renderStateDiffBadges(previousSessionState, sessionState);
   document.getElementById('state-json-viewer').textContent = JSON.stringify(sessionState, null, 2);
   document.getElementById('api-traces-viewer').textContent = JSON.stringify(data.apiTraces, null, 2);
   document.getElementById('prompt-viewer').textContent = data.systemPromptPreview;
@@ -1090,7 +1329,7 @@ function setupSpeechRecognition() {
 }
 
 // =========================================================================
-// ETAPA 03: INGESTA E.164, CONVERSIÓN A USD Y LIMPIEZA DE CARTERA
+// ETAPA 03: INGESTA E.164, CONVERSIÓN A USD, REPARACIÓN Y DESPACHO BATCH
 // =========================================================================
 function getCustomTranchesFromForm() {
   return {
@@ -1146,7 +1385,21 @@ async function executePortfolioValidation() {
       <td class="pill-mono">${r.rawPhone || r.debtAmount}</td>
       <td><span class="status-pill ${pillClass}">${r.status}</span></td>
       <td>${r.reason}</td>
+      <td><button type="button" class="btn-ghost-sm btn-xs">Corregir e Inyectar ↗</button></td>
     `;
+
+    tr.querySelector('button').addEventListener('click', () => {
+      document.getElementById('add-name').value = r.fullName.replace(' (Dup)', '');
+      document.getElementById('add-country').value = r.country || 'AR';
+      document.getElementById('add-phone').value = (!r.rawPhone || String(r.rawPhone).length < 8)
+        ? '11 5588-9900'
+        : `${r.rawPhone}9`;
+      document.getElementById('add-debt').value = r.debtAmount > 0 ? r.debtAmount : 145000;
+      document.getElementById('add-dpd').value = r.daysPastDue || 25;
+      document.getElementById('add-dnc').checked = false;
+      document.getElementById('add-name').focus();
+    });
+
     rejTbody.appendChild(tr);
   });
 
@@ -1168,6 +1421,14 @@ function renderValidPortfolioTable() {
 
   filtered.forEach(r => {
     const liveTime = getCountryLiveTimeInfo(r.country);
+    const dispatchInfo = batchDispatchMap[r.externalId];
+    let dispatchHtml = `<span class="status-pill ${liveTime.isOpen ? 'pill-emerald' : 'pill-amber'}">${liveTime.isOpen ? 'Ventana Abierta' : 'Espera Horario'}</span>`;
+    if (dispatchInfo) {
+      dispatchHtml = dispatchInfo.dispatchStatus === 'HSM_SENT'
+        ? `<span class="status-pill pill-emerald" title="${dispatchInfo.dispatchReason}">HSM Enviado · US$ ${dispatchInfo.discountedUsd}</span>`
+        : `<span class="status-pill pill-rose" title="${dispatchInfo.dispatchReason}">En Cola Legal (${dispatchInfo.localHour})</span>`;
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="pill-mono"><strong>${r.externalId}</strong></td>
@@ -1179,11 +1440,11 @@ function renderValidPortfolioTable() {
       <td class="pill-mono">${r.e164Phone}</td>
       <td class="pill-mono">
         <strong>${r.debtAmount.toLocaleString()} ${r.currency}</strong>
-        <span class="txt-emerald">(~US$ ${r.debtAmountUsd})</span> · ${r.daysPastDue}d
+        <span class="txt-emerald">(~US$ ${r.debtAmountUsd})</span>
       </td>
-      <td>${r.tranche}</td>
-      <td><span class="status-pill pill-emerald">${r.maxDiscountPct}% quita · ${r.maxInstallments}x</span></td>
-      <td><button class="btn-primary-action btn-xs">Simular en Sandbox ↗</button></td>
+      <td><span class="status-pill pill-indigo">${r.maxDiscountPct}% OFF · ${r.maxInstallments}x</span></td>
+      <td>${dispatchHtml}</td>
+      <td><button class="btn-primary-action btn-xs">Simular ↗</button></td>
     `;
     tr.querySelector('button').addEventListener('click', () => {
       document.getElementById('sim-country').value = r.country;
@@ -1221,7 +1482,36 @@ function renderValidPortfolioTable() {
 }
 
 function setupPortfolioControls() {
-  document.getElementById('btn-validate-portfolio').addEventListener('click', executePortfolioValidation);
+  document.getElementById('btn-validate-portfolio').addEventListener('click', () => {
+    batchDispatchMap = {};
+    document.getElementById('batch-dispatch-summary').style.display = 'none';
+    executePortfolioValidation();
+  });
+
+  document.getElementById('btn-dispatch-batch').addEventListener('click', async () => {
+    if (!lastValidPortfolio.length) await executePortfolioValidation();
+    const simulatedHoursByCountry = {};
+    Object.keys(countriesMeta).forEach(code => {
+      simulatedHoursByCountry[code] = getCountryLiveTimeInfo(code).hourNum;
+    });
+
+    const res = await fetch('/api/portfolio/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records: lastValidPortfolio, simulatedHoursByCountry })
+    });
+    const data = await res.json();
+    batchDispatchMap = {};
+    (data.dispatchResults || []).forEach(dr => {
+      batchDispatchMap[dr.externalId] = dr;
+    });
+
+    const summaryEl = document.getElementById('batch-dispatch-summary');
+    summaryEl.style.display = 'inline-flex';
+    summaryEl.textContent = `Batch: ${data.dispatchedCount} enviados · ${data.queuedCount} en cola · US$ ${data.totalOfferUsd} en ofertas`;
+    renderValidPortfolioTable();
+  });
+
   document.getElementById('pf-search').addEventListener('input', renderValidPortfolioTable);
 
   document.getElementById('btn-pf-format-json').addEventListener('click', () => {
@@ -1288,7 +1578,7 @@ function setupPortfolioControls() {
 }
 
 // =========================================================================
-// ETAPA 01: ONBOARDING DE CLIENTE, RELOJES EN VIVO & MATRIZ DE 13 PAÍSES
+// ETAPA 01: ONBOARDING, LÍNEA DE TIEMPO 24H & MATRIZ DE 13 PAÍSES
 // =========================================================================
 function setupOnboardingControls() {
   document.querySelectorAll('.preset-tile').forEach(card => {
@@ -1333,6 +1623,23 @@ function setupOnboardingControls() {
     badge.textContent = 'Reglas Compiladas en Motor ✓';
     setTimeout(() => { badge.textContent = 'Sincronizado'; }, 2500);
   });
+
+  document.getElementById('btn-export-blueprint')?.addEventListener('click', () => {
+    const blueprint = {
+      exportedAt: new Date().toISOString(),
+      clientPresets,
+      countriesMeta,
+      agentFlowNodes,
+      codeActions
+    };
+    const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'agentops_blueprint_13paises.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 
 function renderCountriesTable() {
@@ -1341,6 +1648,9 @@ function renderCountriesTable() {
 
   Object.entries(countriesMeta).forEach(([code, c]) => {
     const liveInfo = getCountryLiveTimeInfo(code);
+    const winLeftPct = (c.windowStart / 24) * 100;
+    const winWidthPct = ((c.windowEnd - c.windowStart) / 24) * 100;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="pill-mono"><strong>${code}</strong></td>
@@ -1353,9 +1663,18 @@ function renderCountriesTable() {
         <span class="pill-mono">${c.tz}</span>
       </td>
       <td>
-        <span class="status-pill ${liveInfo.isOpen ? 'pill-emerald' : 'pill-rose'}" data-live-status="${code}">
-          ${liveInfo.isOpen ? 'Abierta' : 'Cerrada'}
-        </span>
+        <div class="timeline-24h-wrap">
+          <div class="timeline-24h-bar" title="Ventana permitida: ${c.windowStart}:00 a ${c.windowEnd}:00">
+            <div class="timeline-24h-window" style="left:${winLeftPct}%; width:${winWidthPct}%;"></div>
+            <div class="timeline-24h-cursor" data-live-cursor="${code}" style="left:${liveInfo.dayPct}%;"></div>
+          </div>
+          <div class="label-row-between">
+            <span class="pill-mono">${c.windowStart}h–${c.windowEnd}h</span>
+            <span class="status-pill ${liveInfo.isOpen ? 'pill-emerald' : 'pill-rose'}" data-live-status="${code}">
+              ${liveInfo.isOpen ? 'Abierta' : 'Cerrada'}
+            </span>
+          </div>
+        </div>
       </td>
       <td class="pill-mono">
         ${c.currencySymbol} (${c.currency}) ·
@@ -1384,10 +1703,9 @@ function renderCountriesTable() {
       const data = await res.json();
       if (data.country) {
         countriesMeta[code] = data.country;
+        renderCountriesTable();
         updateComplianceHint();
         await executePortfolioValidation();
-        btn.textContent = 'Guardado ✓';
-        setTimeout(() => { btn.textContent = 'Guardar'; }, 1400);
       }
     });
 
@@ -1396,7 +1714,7 @@ function renderCountriesTable() {
 }
 
 // =========================================================================
-// ETAPA 05: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN
+// ETAPA 05: SUITE DE 30+ CASOS DE QA PRE-PRODUCCIÓN
 // =========================================================================
 function setupQaControls() {
   document.getElementById('btn-run-qa').addEventListener('click', executeQaSuite);
@@ -1431,6 +1749,55 @@ function setupQaControls() {
     document.getElementById('chat-messages').innerHTML = '';
     sendMessage(inp.message);
   });
+
+  document.getElementById('add-qa-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      title: document.getElementById('qa-new-title').value.trim(),
+      countryCode: document.getElementById('qa-new-country').value,
+      expectedAgent: document.getElementById('qa-new-agent').value,
+      message: document.getElementById('qa-new-msg').value.trim(),
+      category: 'Ruteo & Anti-Loop'
+    };
+    const res = await fetch('/api/qa/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.report) {
+      e.target.reset();
+      applyQaReport(data.report);
+      const last = lastQaResults[lastQaResults.length - 1];
+      if (last) inspectQaCase(last);
+    }
+  });
+
+  document.getElementById('btn-export-qa-report')?.addEventListener('click', () => {
+    const cert = {
+      certifiedAt: new Date().toISOString(),
+      totalCases: lastQaResults.length,
+      passedCases: lastQaResults.filter(r => r.passed).length,
+      results: lastQaResults
+    };
+    const blob = new Blob([JSON.stringify(cert, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'certificado_qa_preproduccion.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function applyQaReport(report) {
+  lastQaResults = report.results || [];
+  document.getElementById('nav-qa-badge').textContent = `${report.passed}/${report.total}`;
+  document.getElementById('qa-summary-pills').innerHTML = `
+    <span class="status-pill pill-emerald">${report.passed}/${report.total} Aprobados (${report.passRate}%)</span>
+    <span class="pill-mono">${report.executionTimeMs} ms</span>
+  `;
+  renderQaTable();
 }
 
 async function executeQaSuite() {
@@ -1440,20 +1807,12 @@ async function executeQaSuite() {
 
   const res = await fetch('/api/qa/run', { method: 'POST' });
   const report = await res.json();
-  lastQaResults = report.results || [];
-
-  document.getElementById('nav-qa-badge').textContent = `${report.passed}/${report.total}`;
-  document.getElementById('qa-summary-pills').innerHTML = `
-    <span class="status-pill pill-emerald">${report.passed}/${report.total} Aprobados (${report.passRate}%)</span>
-    <span class="pill-mono">${report.executionTimeMs} ms</span>
-  `;
-
-  renderQaTable();
+  applyQaReport(report);
   if (lastQaResults.length > 0) {
     inspectQaCase(lastQaResults[0]);
   }
 
-  btn.textContent = 'Ejecutar 30 Casos Ahora';
+  btn.textContent = 'Ejecutar Suite Ahora';
   btn.disabled = false;
 }
 
