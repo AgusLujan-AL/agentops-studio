@@ -1,232 +1,335 @@
-let sessionState = {
-  language: 'es',
-  countryCode: 'AR',
-  activeAgent: 'SupportTriageAgent',
-  handoffHopCount: 0
-};
-
-let customClientConfig = null;
 let countriesMeta = {};
 let defaultCoordsByCountry = {};
 let clientPresets = {};
 let samplePortfolio = [];
-let lastValidPortfolio = [];
-let lastQaReport = null;
-let selectedQaCase = null;
+let sessionState = {};
+let customClientConfig = null;
+let callbotVoiceEnabled = false;
 let livePromisesCount = 0;
+let lastQaResults = [];
+let selectedQaCase = null;
+let currentQaFilter = 'ALL';
+let lastValidPortfolio = [];
+let currentStage = 'simulator';
 
-function speakCallbotReply(text, lang = 'es') {
-  const voiceEnabled = document.getElementById('sim-voice-tts')?.checked;
-  if (!voiceEnabled || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const cleanText = text.replace(/[*_`•]/g, '');
-  const utter = new SpeechSynthesisUtterance(cleanText);
-  utter.lang = lang === 'pt' ? 'pt-BR' : 'es-AR';
-  utter.rate = 1.03;
-  window.speechSynthesis.speak(utter);
-}
+const STAGE_META = {
+  onboarding: {
+    step: 'ETAPA 01 / 04',
+    title: 'Reglas de Negocio & Compliance Regional (13 Países)',
+    desc: 'Configuración de políticas bancarias de quita, cuotas y ventanas horarias legales en Latinoamérica.',
+    nextStage: 'portfolio',
+    nextLabel: 'Ir a Etapa 02: Ingesta E.164'
+  },
+  portfolio: {
+    step: 'ETAPA 02 / 04',
+    title: 'Ingesta, Sanitización E.164 & Segmentación de Cartera',
+    desc: 'Normalización telefónica internacional, bloqueo de Registro No Llame (DNC) y asignación de oferta por mora.',
+    nextStage: 'simulator',
+    nextLabel: 'Ir a Etapa 03: Sandbox IA'
+  },
+  simulator: {
+    step: 'ETAPA 03 / 04',
+    title: 'Sandbox Multi-Agente, Cobro Presencial Turf.js & Inspector',
+    desc: 'Prueba conversacional en vivo, geolocalización de sucursales por GPS y auditoría de estado anti-loop.',
+    nextStage: 'qa',
+    nextLabel: 'Ir a Etapa 04: Gate QA (30)'
+  },
+  qa: {
+    step: 'ETAPA 04 / 04',
+    title: 'Certificación Pre-Producción (Suite de 30 Casos QA)',
+    desc: 'Verificación automatizada de ruteo bilingüe ES/PT, precisión geodésica Turf.js y guardrails de seguridad.',
+    nextStage: 'onboarding',
+    nextLabel: 'Volver a Etapa 01: Reglas'
+  }
+};
 
-async function initApp() {
-  // 1. Navegación principal
-  document.querySelectorAll('.nav-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-    });
-  });
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadInitialConfig();
+  setupNavigationAndDrawer();
+  setupInspectorTabs();
+  setupSimulatorControls();
+  setupSpeechRecognition();
+  setupPortfolioControls();
+  setupOnboardingControls();
+  setupQaControls();
 
-  // 2. Sub-pestañas del Inspector Técnico
-  document.querySelectorAll('.insp-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.insp-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.dataset.insp;
-      document.querySelectorAll('.insp-section').forEach(sec => {
-        sec.style.display = (target === 'all' || sec.dataset.section === target) ? 'block' : 'none';
-      });
-    });
-  });
+  // Cargar datos iniciales en segundo plano para todas las etapas
+  await executePortfolioValidation();
+  await executeQaSuite();
 
-  // 3. Cargar configuración inicial del servidor
+  // Respetar hash de URL si existe (#onboarding, #portfolio, #simulator, #qa)
+  const initialHash = window.location.hash.replace('#', '');
+  if (STAGE_META[initialHash]) {
+    navigateToStage(initialHash, false);
+  } else {
+    navigateToStage('simulator', false);
+  }
+});
+
+async function loadInitialConfig() {
   const res = await fetch('/api/config');
   const data = await res.json();
-  countriesMeta = data.countries;
-  defaultCoordsByCountry = data.defaultCoords;
-  clientPresets = data.clientPresets;
-  samplePortfolio = data.samplePortfolio;
+  countriesMeta = data.countries || {};
+  defaultCoordsByCountry = data.defaultCoords || {};
+  clientPresets = data.clientPresets || {};
+  samplePortfolio = data.samplePortfolio || [];
 
-  populateCountriesUI();
-  loadPresetIntoOnboardingForm('banca_cobranzas');
+  const simCountry = document.getElementById('sim-country');
+  const addCountry = document.getElementById('add-country');
+  simCountry.innerHTML = '';
+  addCountry.innerHTML = '';
 
-  // Inicializar editor de cartera con el lote de 12 registros
+  Object.entries(countriesMeta).forEach(([code, c]) => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = `${code} — ${c.name} (${c.currency} · ${c.lang.toUpperCase()})`;
+    simCountry.appendChild(opt);
+
+    const opt2 = document.createElement('option');
+    opt2.value = code;
+    opt2.textContent = `${code} (${c.name})`;
+    addCountry.appendChild(opt2);
+  });
+
   document.getElementById('pf-raw-editor').value = JSON.stringify(samplePortfolio, null, 2);
+  renderCountriesTable();
+  resetConversationSession();
+}
 
-  // Eventos de país y hora en Simulador
+// =========================================================================
+// MENÚ HAMBURGUESA & NAVEGACIÓN DE PÁGINAS A PANTALLA COMPLETA
+// =========================================================================
+function toggleDrawer(forceOpen) {
+  const drawer = document.getElementById('nav-drawer');
+  const backdrop = document.getElementById('drawer-backdrop');
+  const isOpen = typeof forceOpen === 'boolean' ? forceOpen : !drawer.classList.contains('open');
+  drawer.classList.toggle('open', isOpen);
+  backdrop.classList.toggle('open', isOpen);
+}
+
+function navigateToStage(stageKey, pushHash = true) {
+  if (!STAGE_META[stageKey]) return;
+  currentStage = stageKey;
+
+  if (pushHash) {
+    history.replaceState(null, '', `#${stageKey}`);
+  }
+
+  // Actualizar secciones fullscreen
+  document.querySelectorAll('.stage-page').forEach(sec => sec.classList.remove('active'));
+  document.getElementById(`tab-${stageKey}`)?.classList.add('active');
+
+  // Actualizar items del menú hamburguesa
+  document.querySelectorAll('.drawer-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.tab === stageKey);
+  });
+
+  // Actualizar dots rápidos 01-04
+  document.querySelectorAll('.stage-dot').forEach(dot => {
+    dot.classList.toggle('active', dot.dataset.tab === stageKey);
+  });
+
+  // Actualizar barra superior contextual
+  const meta = STAGE_META[stageKey];
+  document.getElementById('crumb-step').textContent = meta.step;
+  document.getElementById('crumb-title').textContent = meta.title;
+  document.getElementById('crumb-desc').textContent = meta.desc;
+  document.getElementById('next-stage-label').textContent = meta.nextLabel;
+
+  toggleDrawer(false);
+}
+
+function setupNavigationAndDrawer() {
+  document.getElementById('btn-open-drawer').addEventListener('click', () => toggleDrawer(true));
+  document.getElementById('btn-close-drawer').addEventListener('click', () => toggleDrawer(false));
+  document.getElementById('drawer-backdrop').addEventListener('click', () => toggleDrawer(false));
+
+  document.querySelectorAll('.drawer-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigateToStage(item.dataset.tab);
+    });
+  });
+
+  document.querySelectorAll('.stage-dot').forEach(dot => {
+    dot.addEventListener('click', () => navigateToStage(dot.dataset.tab));
+  });
+
+  document.getElementById('btn-next-stage').addEventListener('click', () => {
+    const next = STAGE_META[currentStage]?.nextStage || 'onboarding';
+    navigateToStage(next);
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (STAGE_META[hash] && hash !== currentStage) {
+      navigateToStage(hash, false);
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleDrawer(false);
+    } else if ((e.key === 'm' || e.key === 'M') && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+      e.preventDefault();
+      toggleDrawer();
+    }
+  });
+}
+
+function setupInspectorTabs() {
+  document.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.inspector-body').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`itab-${btn.dataset.itab}`).classList.add('active');
+    });
+  });
+}
+
+function updateFunnelCounters() {
+  document.getElementById('funnel-promises').textContent = String(livePromisesCount);
+}
+
+function speakCallbotReply(text, langCode = 'es') {
+  if (!callbotVoiceEnabled || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const cleanText = text.replace(/[*`_~#]/g, '').replace(/\n+/g, '. ');
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = langCode === 'pt' ? 'pt-BR' : 'es-MX';
+  utterance.rate = 1.05;
+  window.speechSynthesis.speak(utterance);
+}
+
+// =========================================================================
+// ETAPA 03: SANDBOX MULTI-AGENTE + TURF.JS + INSPECTOR ANTI-LOOP
+// =========================================================================
+function setupSimulatorControls() {
   const countrySelect = document.getElementById('sim-country');
+  const hourRange = document.getElementById('sim-hour');
+
   countrySelect.addEventListener('change', () => {
     const code = countrySelect.value;
+    const defCoords = defaultCoordsByCountry[code];
+    if (defCoords) {
+      document.getElementById('sim-lat').value = defCoords.lat;
+      document.getElementById('sim-lng').value = defCoords.lng;
+    }
     updateSimulatorCountryContext(code);
   });
 
-  const hourInput = document.getElementById('sim-hour');
-  hourInput.addEventListener('input', () => {
-    updateWindowStatusPill();
+  hourRange.addEventListener('input', () => {
+    const h = String(hourRange.value).padStart(2, '0');
+    document.getElementById('sim-hour-badge').textContent = `${h}:00 hs`;
+    updateComplianceHint();
   });
 
-  // Playbooks de 1 clic
-  document.querySelectorAll('.playbook-item[data-msg]').forEach(btn => {
+  document.querySelectorAll('.chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('sim-lat').value = btn.dataset.lat;
+      document.getElementById('sim-lng').value = btn.dataset.lng;
+      if (btn.dataset.country) {
+        countrySelect.value = btn.dataset.country;
+        updateSimulatorCountryContext(btn.dataset.country);
+      }
+    });
+  });
+
+  document.querySelectorAll('.scenario-item').forEach(btn => {
     btn.addEventListener('click', () => {
       sendMessage(btn.dataset.msg);
     });
   });
 
-  // Plantilla HSM Saliente
-  document.getElementById('btn-send-hsm').addEventListener('click', triggerOutboundHsm);
+  document.getElementById('btn-reset-session').addEventListener('click', resetConversationSession);
 
-  // Envío de mensaje manual
-  document.getElementById('chat-form').addEventListener('submit', e => {
+  document.getElementById('callbot-voice-toggle').addEventListener('change', (e) => {
+    callbotVoiceEnabled = e.target.checked;
+    if (!callbotVoiceEnabled && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  });
+
+  document.getElementById('btn-send-hsm').addEventListener('click', triggerWhatsAppHsmTemplate);
+
+  document.getElementById('btn-force-loop-test').addEventListener('click', () => {
+    sessionState.handoffHopCount = 3;
+    sessionState.pendingLanguageSwitch = true;
+    sessionState.awaitingSubAgentAck = true;
+    sendMessage('Necesito cambiar mi acuerdo y revisar otra consulta urgente');
+  });
+
+  document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
-    sendMessage(text);
-  });
-
-  // Dictado por voz (Speech-to-Text)
-  setupSpeechRecognition();
-
-  // Reiniciar sesión
-  document.getElementById('btn-reset-session').addEventListener('click', () => {
-    const code = document.getElementById('sim-country').value;
-    sessionState = {
-      language: countriesMeta[code]?.lang || 'es',
-      countryCode: code,
-      activeAgent: 'SupportTriageAgent',
-      handoffHopCount: 0
-    };
-    document.getElementById('chat-messages').innerHTML = '';
-    sendMessage(countriesMeta[code]?.lang === 'pt' ? 'Olá' : 'Hola');
-  });
-
-  // Eventos de Cartera (Portfolio)
-  document.getElementById('btn-run-portfolio').addEventListener('click', executePortfolioValidation);
-  document.getElementById('btn-reset-portfolio').addEventListener('click', () => {
-    document.getElementById('pf-raw-editor').value = JSON.stringify(samplePortfolio, null, 2);
-    executePortfolioValidation();
-  });
-  document.getElementById('form-add-debtor').addEventListener('submit', handleAddDebtor);
-  document.getElementById('pf-file-input').addEventListener('change', handlePortfolioFileUpload);
-  document.getElementById('pf-search').addEventListener('input', renderValidPortfolioTable);
-  document.getElementById('btn-export-csv').addEventListener('click', exportCleanPortfolioCsv);
-
-  // Eventos de Onboarding
-  document.getElementById('cfg-preset-select').addEventListener('change', e => {
-    loadPresetIntoOnboardingForm(e.target.value);
-  });
-  document.getElementById('btn-save-config').addEventListener('click', saveClientConfig);
-
-  // Eventos de QA
-  document.getElementById('btn-run-qa').addEventListener('click', executeQaSuite);
-  document.getElementById('btn-replay-qa').addEventListener('click', replaySelectedQaCase);
-  document.querySelectorAll('#qa-category-filters .filter-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('#qa-category-filters .filter-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      renderQaTable(chip.dataset.cat);
-    });
-  });
-
-  updateSimulatorCountryContext('AR');
-  await sendMessage('Hola');
-  await executePortfolioValidation();
-  await executeQaSuite();
-}
-
-function populateCountriesUI() {
-  const simCountry = document.getElementById('sim-country');
-  const addCountry = document.getElementById('add-country');
-  const tbody = document.querySelector('#countries-table tbody');
-
-  simCountry.innerHTML = '';
-  addCountry.innerHTML = '';
-  tbody.innerHTML = '';
-
-  Object.entries(countriesMeta).forEach(([code, c]) => {
-    const opt1 = document.createElement('option');
-    opt1.value = code;
-    opt1.textContent = `${code} — ${c.name} (${c.lang.toUpperCase()} · ${c.currency})`;
-    simCountry.appendChild(opt1);
-
-    const opt2 = document.createElement('option');
-    opt2.value = code;
-    opt2.textContent = `${code} — ${c.name} (${c.currency})`;
-    addCountry.appendChild(opt2);
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong class="pill-mono">${code}</strong></td>
-      <td><strong>${c.name}</strong></td>
-      <td><span class="pill pill-mono">${c.lang.toUpperCase()}</span></td>
-      <td class="pill-mono">${c.currency}</td>
-      <td><input type="number" min="0" max="23" value="${c.windowStart}" class="mono-input win-start" style="width:64px;" /> :00</td>
-      <td><input type="number" min="1" max="24" value="${c.windowEnd}" class="mono-input win-end" style="width:64px;" /> :00</td>
-      <td>${c.dncRegistry}</td>
-      <td><button class="btn-ghost btn-xs" data-code="${code}">Aplicar</button></td>
-    `;
-    tr.querySelector('button').addEventListener('click', async (ev) => {
-      const btn = ev.currentTarget;
-      const startVal = Number(tr.querySelector('.win-start').value);
-      const endVal = Number(tr.querySelector('.win-end').value);
-      const r = await fetch('/api/config/country', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ countryCode: code, windowStart: startVal, windowEnd: endVal })
-      });
-      const updated = await r.json();
-      if (updated.ok) {
-        countriesMeta[code] = updated.country;
-        updateWindowStatusPill();
-        btn.textContent = 'Guardado ✓';
-        setTimeout(() => { btn.textContent = 'Aplicar'; }, 1800);
-      }
-    });
-    tbody.appendChild(tr);
+    await sendMessage(text);
   });
 }
 
 function updateSimulatorCountryContext(code) {
-  const coords = defaultCoordsByCountry[code];
-  if (coords) {
-    document.getElementById('sim-lat').value = coords.lat;
-    document.getElementById('sim-lng').value = coords.lng;
-    document.getElementById('coords-city-label').textContent = coords.label;
-  }
-  updateWindowStatusPill();
+  const c = countriesMeta[code] || countriesMeta.AR;
+  document.getElementById('chat-country-badge').textContent = `${c.name} · ${c.currency}`;
+  document.getElementById('chat-lang-badge').textContent = c.lang.toUpperCase();
+  updateComplianceHint();
 }
 
-function updateWindowStatusPill() {
+function updateComplianceHint() {
   const code = document.getElementById('sim-country').value || 'AR';
   const c = countriesMeta[code] || countriesMeta.AR;
   const hour = Number(document.getElementById('sim-hour').value);
-  const pill = document.getElementById('hour-window-pill');
-  const rangeLabel = document.getElementById('window-range-label');
+  const hint = document.getElementById('compliance-window-hint');
+  const allowed = hour >= c.windowStart && hour < c.windowEnd;
 
-  rangeLabel.textContent = `Ventana: ${String(c.windowStart).padStart(2, '0')}:00 - ${String(c.windowEnd).padStart(2, '0')}:00`;
-  const within = hour >= c.windowStart && hour < c.windowEnd;
-
-  if (within) {
-    pill.className = 'status-pill pill-emerald';
-    pill.textContent = `${String(hour).padStart(2, '0')}:00 hs · En Ventana`;
-  } else {
-    pill.className = 'status-pill pill-rose';
-    pill.textContent = `${String(hour).padStart(2, '0')}:00 hs · Bloqueo DNC`;
-  }
+  hint.className = `compliance-status-bar ${allowed ? '' : 'blocked'}`;
+  hint.textContent = allowed
+    ? `Ventana legal ${code}: ${String(c.windowStart).padStart(2, '0')}:00 a ${String(c.windowEnd).padStart(2, '0')}:00 hs (Permitido)`
+    : `Fuera de horario en ${code} (${String(c.windowStart).padStart(2, '0')}:00–${String(c.windowEnd).padStart(2, '0')}:00 · ${c.regulation})`;
 }
 
-function triggerOutboundHsm() {
+function resetConversationSession() {
+  const code = document.getElementById('sim-country')?.value || 'AR';
+  const c = countriesMeta[code] || { name: 'Argentina', currency: 'ARS', lang: 'es' };
+  sessionState = {
+    language: c.lang,
+    countryCode: code,
+    customerName: 'Martín Gómez',
+    debtAmount: 185000,
+    daysPastDue: 22,
+    tranche: 'Mora Temprana (1-30d)',
+    maxDiscountPct: 25,
+    maxInstallments: 6,
+    activeAgent: 'SupportTriageAgent',
+    conversationStage: 'INITIAL',
+    handoffHopCount: 0,
+    turnsCount: 0
+  };
+
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = '';
+  appendChatBubble(
+    'bot',
+    `Sesión inicializada en **${c.name}** (${c.currency}).\nPodés escribir libremente, usar el micrófono, disparar una plantilla HSM o hacer clic en cualquiera de las opciones interactivas:`,
+    'SYSTEM_BOOT · Runtime Multi-Agente Listo',
+    [
+      { label: 'Consultar deuda y opciones de quita', msg: 'Hola, quiero consultar mi deuda pendiente y ver qué descuento tienen' },
+      { label: 'Buscar sucursal cercana para pagar en efectivo (Turf.js)', msg: '¿Qué sucursal tengo más cerca de mi ubicación para pagar por ventanilla?' }
+    ]
+  );
+
+  document.getElementById('state-json-viewer').textContent = JSON.stringify(sessionState, null, 2);
+  document.getElementById('api-traces-viewer').textContent = '[]';
+  document.getElementById('api-cards-container').innerHTML = '';
+  document.getElementById('api-count-label').textContent = '0 operaciones';
+  document.getElementById('chat-customer-subtitle').textContent =
+    `Titular: ${sessionState.customerName} (${sessionState.debtAmount.toLocaleString()} ${c.currency}) · Etapa: INITIAL`;
+  updateSimulatorCountryContext(code);
+}
+
+function triggerWhatsAppHsmTemplate() {
   const code = document.getElementById('sim-country').value || 'AR';
   const c = countriesMeta[code] || countriesMeta.AR;
   const customerName = sessionState.customerName || 'Titular Verificado';
@@ -283,7 +386,7 @@ async function sendMessage(message) {
   const lat = parseFloat(document.getElementById('sim-lat').value);
   const lng = parseFloat(document.getElementById('sim-lng').value);
 
-  appendChatBubble('user', message, `USUARIO · ${countryCode} · ${String(simulatedHour).padStart(2, '0')}:00 hs`);
+  appendChatBubble('user', message, `CLIENTE · ${countryCode} · ${String(simulatedHour).padStart(2, '0')}:00 hs`);
 
   const t0 = performance.now();
   const res = await fetch('/api/chat/turn', {
@@ -330,7 +433,6 @@ async function sendMessage(message) {
 
   speakCallbotReply(data.reply, data.language);
 
-  // Actualizar cabeceras e Inspector
   document.getElementById('chat-agent-badge').textContent = data.routedTo;
   document.getElementById('chat-lang-badge').textContent = data.language.toUpperCase();
   document.getElementById('chat-country-badge').textContent = `${sessionState.countryName} · ${sessionState.currency}`;
@@ -371,7 +473,7 @@ function renderApiTraceCards(traces = []) {
   traces.forEach(t => {
     const div = document.createElement('div');
     div.className = 'api-trace-pill';
-    const statusClass = t.status >= 400 ? 'pill-rose' : t.status === 201 ? 'pill-emerald' : 'pill-emerald';
+    const statusClass = t.status >= 400 ? 'pill-rose' : 'pill-emerald';
     div.innerHTML = `
       <span><strong>${t.method}</strong> ${t.endpoint}</span>
       <span class="status-pill ${statusClass}">${t.status} · ${t.latencyMs}ms</span>
@@ -411,7 +513,7 @@ function setupSpeechRecognition() {
 }
 
 // =========================================================================
-// VISTA 2: INGESTA Y LIMPIEZA DE CARTERA
+// ETAPA 02: INGESTA Y LIMPIEZA DE CARTERA E.164
 // =========================================================================
 function getCustomTranchesFromForm() {
   return {
@@ -451,7 +553,8 @@ async function executePortfolioValidation() {
   document.getElementById('pf-ready').textContent = report.readyCount;
   document.getElementById('pf-rejected').textContent = report.rejectedCount;
   document.getElementById('pf-time').textContent = `${report.executionTimeMs} ms`;
-  document.getElementById('nav-pf-badge').textContent = report.readyCount;
+  document.getElementById('nav-pf-badge').textContent = `${report.readyCount} Listos`;
+  document.getElementById('funnel-valid').textContent = `${report.readyCount} / ${report.totalInput}`;
 
   const rejTbody = document.querySelector('#pf-rejected-table tbody');
   rejTbody.innerHTML = '';
@@ -461,7 +564,7 @@ async function executePortfolioValidation() {
     tr.innerHTML = `
       <td class="pill-mono"><strong>${r.externalId}</strong></td>
       <td>${r.fullName}</td>
-      <td><span class="pill pill-mono">${r.country}</span></td>
+      <td><span class="pill-mono">${r.country}</span></td>
       <td class="pill-mono">${r.rawPhone || r.debtAmount}</td>
       <td><span class="status-pill ${pillClass}">${r.status}</span></td>
       <td>${r.reason}</td>
@@ -490,15 +593,20 @@ function renderValidPortfolioTable() {
     tr.innerHTML = `
       <td class="pill-mono"><strong>${r.externalId}</strong></td>
       <td><strong>${r.fullName}</strong></td>
-      <td><span class="pill pill-mono">${r.country}</span></td>
+      <td><span class="pill-mono">${r.country}</span></td>
       <td class="pill-mono">${r.e164Phone}</td>
       <td class="pill-mono"><strong>${r.debtAmount.toLocaleString()} ${r.currency}</strong> (${r.daysPastDue}d)</td>
       <td>${r.tranche}</td>
       <td><span class="status-pill pill-emerald">${r.maxDiscountPct}% quita · ${r.maxInstallments}x</span></td>
-      <td><button class="btn-solid btn-xs">Simular Contacto ↗</button></td>
+      <td><button class="btn-primary-action btn-xs">Simular en Etapa 03 ↗</button></td>
     `;
     tr.querySelector('button').addEventListener('click', () => {
       document.getElementById('sim-country').value = r.country;
+      const defCoords = defaultCoordsByCountry[r.country];
+      if (defCoords) {
+        document.getElementById('sim-lat').value = defCoords.lat;
+        document.getElementById('sim-lng').value = defCoords.lng;
+      }
       updateSimulatorCountryContext(r.country);
 
       sessionState = {
@@ -515,7 +623,7 @@ function renderValidPortfolioTable() {
         handoffHopCount: 0
       };
 
-      document.querySelector('.nav-tab[data-tab="simulator"]').click();
+      navigateToStage('simulator');
       document.getElementById('chat-messages').innerHTML = '';
       const firstMsg = r.language === 'PT'
         ? `Olá, sou ${r.fullName}, recebi o aviso e quero consultar minha fatura pendente`
@@ -526,219 +634,282 @@ function renderValidPortfolioTable() {
   });
 }
 
-function handleAddDebtor(e) {
-  e.preventDefault();
-  let currentArr = [];
-  try {
-    currentArr = JSON.parse(document.getElementById('pf-raw-editor').value);
-    if (!Array.isArray(currentArr)) currentArr = [...samplePortfolio];
-  } catch {
-    currentArr = [...samplePortfolio];
-  }
+function setupPortfolioControls() {
+  document.getElementById('btn-validate-portfolio').addEventListener('click', executePortfolioValidation);
+  document.getElementById('pf-search').addEventListener('input', renderValidPortfolioTable);
 
-  const newRow = {
-    externalId: `CLI-${9000 + currentArr.length + 1}`,
-    fullName: document.getElementById('add-name').value.trim(),
-    country: document.getElementById('add-country').value,
-    rawPhone: document.getElementById('add-phone').value.trim(),
-    debtAmount: Number(document.getElementById('add-debt').value),
-    daysPastDue: Number(document.getElementById('add-dpd').value),
-    dncListed: document.getElementById('add-dnc').checked
-  };
-
-  currentArr.unshift(newRow);
-  document.getElementById('pf-raw-editor').value = JSON.stringify(currentArr, null, 2);
-  document.getElementById('add-name').value = '';
-  document.getElementById('add-phone').value = '';
-  document.getElementById('add-dnc').checked = false;
-  executePortfolioValidation();
-}
-
-function handlePortfolioFileUpload(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    document.getElementById('pf-raw-editor').value = String(reader.result || '');
-    executePortfolioValidation();
-  };
-  reader.readAsText(file);
-}
-
-function exportCleanPortfolioCsv() {
-  if (!lastValidPortfolio.length) return;
-  const headers = ['externalId', 'fullName', 'country', 'e164Phone', 'currency', 'debtAmount', 'daysPastDue', 'tranche', 'maxDiscountPct', 'maxInstallments'];
-  const rows = lastValidPortfolio.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','));
-  const csvContent = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'cartera_limpia_e164.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// =========================================================================
-// VISTA 3: CONFIGURACIÓN DE ONBOARDING
-// =========================================================================
-function loadPresetIntoOnboardingForm(presetId) {
-  const p = clientPresets[presetId] || clientPresets.banca_cobranzas;
-  if (!p) return;
-  document.getElementById('cfg-name').value = p.clientName;
-  document.getElementById('cfg-role').value = p.rolePrompt;
-  document.getElementById('cfg-tone').value = p.tone;
-  document.getElementById('cfg-discount').value = p.maxDiscountPct;
-  document.getElementById('cfg-installments').value = p.maxInstallments;
-  document.getElementById('tr-early-disc').value = p.tranches?.early?.maxDiscountPct ?? 15;
-  document.getElementById('tr-early-inst').value = p.tranches?.early?.maxInstallments ?? 3;
-  document.getElementById('tr-mid-disc').value = p.tranches?.mid?.maxDiscountPct ?? 25;
-  document.getElementById('tr-mid-inst').value = p.tranches?.mid?.maxInstallments ?? 6;
-  document.getElementById('tr-late-disc').value = p.tranches?.late?.maxDiscountPct ?? 40;
-  document.getElementById('tr-late-inst').value = p.tranches?.late?.maxInstallments ?? 12;
-  document.getElementById('cfg-guardrails').value = (p.guardrails || []).join('\n');
-}
-
-async function saveClientConfig() {
-  const clientId = document.getElementById('cfg-preset-select').value;
-  const tranches = getCustomTranchesFromForm();
-  const guardrails = document.getElementById('cfg-guardrails').value
-    .split('\n')
-    .map(s => s.trim())
-    .filter(Boolean);
-
-  const newConfig = {
-    clientId,
-    clientName: document.getElementById('cfg-name').value.trim(),
-    vertical: clientPresets[clientId]?.vertical || 'Custom Profile',
-    rolePrompt: document.getElementById('cfg-role').value.trim(),
-    tone: document.getElementById('cfg-tone').value.trim(),
-    maxDiscountPct: Number(document.getElementById('cfg-discount').value) || 25,
-    maxInstallments: Number(document.getElementById('cfg-installments').value) || 6,
-    tranches,
-    guardrails
-  };
-
-  const res = await fetch('/api/config/client', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ clientId, config: newConfig })
+  document.getElementById('btn-pf-format-json').addEventListener('click', () => {
+    document.getElementById('pf-raw-editor').value = JSON.stringify(samplePortfolio, null, 2);
   });
-  const data = await res.json();
-  if (data.ok) {
-    clientPresets[clientId] = data.clientPreset;
-    customClientConfig = data.clientPreset;
-    sessionState.maxDiscountPct = newConfig.maxDiscountPct;
-    sessionState.maxInstallments = newConfig.maxInstallments;
 
+  document.getElementById('btn-pf-format-csv').addEventListener('click', () => {
+    const header = 'externalId,fullName,country,rawPhone,debtAmount,daysPastDue,dncListed';
+    const rows = samplePortfolio.map(r =>
+      `${r.externalId},${r.fullName},${r.country},${r.rawPhone},${r.debtAmount},${r.daysPastDue},${r.dncListed}`
+    );
+    document.getElementById('pf-raw-editor').value = [header, ...rows].join('\n');
+  });
+
+  document.getElementById('pf-file-upload').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    document.getElementById('pf-raw-editor').value = text;
     await executePortfolioValidation();
+  });
 
-    const badge = document.getElementById('cfg-saved-msg');
-    badge.style.display = 'inline-flex';
-    setTimeout(() => { badge.style.display = 'none'; }, 2800);
-  }
+  document.getElementById('add-debtor-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let currentArr = [];
+    try {
+      currentArr = JSON.parse(document.getElementById('pf-raw-editor').value);
+      if (!Array.isArray(currentArr)) currentArr = [...samplePortfolio];
+    } catch {
+      currentArr = [...samplePortfolio];
+    }
+
+    const newRow = {
+      externalId: `CLI-${9000 + currentArr.length + 1}`,
+      fullName: document.getElementById('add-name').value.trim(),
+      country: document.getElementById('add-country').value,
+      rawPhone: document.getElementById('add-phone').value.trim(),
+      debtAmount: Number(document.getElementById('add-debt').value),
+      daysPastDue: Number(document.getElementById('add-dpd').value),
+      dncListed: document.getElementById('add-dnc').checked
+    };
+
+    currentArr.unshift(newRow);
+    document.getElementById('pf-raw-editor').value = JSON.stringify(currentArr, null, 2);
+    e.target.reset();
+    await executePortfolioValidation();
+  });
+
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if (!lastValidPortfolio.length) return;
+    const headers = ['externalId', 'fullName', 'country', 'e164Phone', 'debtAmount', 'currency', 'daysPastDue', 'tranche', 'maxDiscountPct', 'maxInstallments'];
+    const lines = [
+      headers.join(','),
+      ...lastValidPortfolio.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'padron_e164_aprobado.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 
 // =========================================================================
-// VISTA 4: SUITE DE 30 CASOS DE QA & FUNNEL
+// ETAPA 01: ONBOARDING DE CLIENTE & MATRIZ DE 13 PAÍSES
 // =========================================================================
-async function executeQaSuite() {
-  const res = await fetch('/api/qa/run', { method: 'POST' });
-  lastQaReport = await res.json();
+function setupOnboardingControls() {
+  document.querySelectorAll('.preset-tile').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.preset-tile').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      const presetKey = card.dataset.preset;
+      const p = clientPresets[presetKey];
+      if (!p) return;
 
-  document.getElementById('qa-total').textContent = `${lastQaReport.passedCount} / ${lastQaReport.totalCases}`;
-  document.getElementById('qa-passrate').textContent = `${lastQaReport.passRatePct}%`;
-  document.getElementById('qa-duration').textContent = `${lastQaReport.totalDurationMs} ms`;
-  document.getElementById('nav-qa-badge').textContent = `${lastQaReport.passedCount}/${lastQaReport.totalCases}`;
+      document.getElementById('sim-client').value = presetKey;
+      document.getElementById('ob-name').value = p.name;
+      document.getElementById('ob-tone').value = p.tone;
+      document.getElementById('ob-discount').value = p.maxDiscountPct;
+      document.getElementById('ob-installments').value = p.maxInstallments;
+      document.getElementById('ob-rules').value = p.businessRules;
+    });
+  });
 
-  const activeCat = document.querySelector('#qa-category-filters .filter-chip.active')?.dataset?.cat || 'ALL';
-  renderQaTable(activeCat);
+  document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const activePreset = document.querySelector('.preset-tile.active')?.dataset.preset || 'banca_cobranzas';
+    customClientConfig = {
+      name: document.getElementById('ob-name').value.trim(),
+      tone: document.getElementById('ob-tone').value.trim(),
+      maxDiscountPct: Number(document.getElementById('ob-discount').value),
+      maxInstallments: Number(document.getElementById('ob-installments').value),
+      businessRules: document.getElementById('ob-rules').value.trim()
+    };
 
-  if (lastQaReport.results.length > 0) {
-    selectQaCase(lastQaReport.results[1]); // Mostrar por defecto QA-02 (Sanitizador Anti-Loop)
-  }
+    const res = await fetch('/api/config/client', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId: activePreset, config: customClientConfig })
+    });
+    const data = await res.json();
+    if (data.clientPreset) {
+      clientPresets[activePreset] = data.clientPreset;
+    }
+
+    const badge = document.getElementById('ob-save-feedback');
+    badge.textContent = 'Reglas Compiladas en Motor ✓';
+    setTimeout(() => { badge.textContent = 'Sincronizado'; }, 2500);
+  });
 }
 
-function renderQaTable(category = 'ALL') {
-  if (!lastQaReport) return;
-  const tbody = document.querySelector('#qa-results-table tbody');
+function renderCountriesTable() {
+  const tbody = document.querySelector('#countries-table tbody');
   tbody.innerHTML = '';
 
-  const rows = lastQaReport.results.filter(r => category === 'ALL' || r.category === category);
-
-  rows.forEach(r => {
+  Object.entries(countriesMeta).forEach(([code, c]) => {
     const tr = document.createElement('tr');
-    if (selectedQaCase?.id === r.id) tr.classList.add('selected-row');
     tr.innerHTML = `
-      <td class="pill-mono"><strong>${r.id}</strong></td>
-      <td><span class="pill">${r.category}</span></td>
-      <td><strong>${r.title}</strong></td>
-      <td class="pill-mono">${r.routedTo}</td>
-      <td class="pill-mono">${r.checks.map(c => c.check).join(' · ')}</td>
-      <td class="pill-mono">${r.durationMs} ms</td>
-      <td><span class="status-pill ${r.passed ? 'pill-emerald' : 'pill-rose'}">${r.passed ? 'PASS' : 'FAIL'}</span></td>
+      <td class="pill-mono"><strong>${code}</strong></td>
+      <td><strong>${c.name}</strong></td>
+      <td><span class="pill-mono">${c.lang.toUpperCase()}</span></td>
+      <td class="pill-mono">${c.currencySymbol} (${c.currency})</td>
+      <td class="pill-mono">${c.tz}</td>
+      <td><input type="number" class="win-input win-start" min="0" max="23" value="${c.windowStart}" /> :00</td>
+      <td><input type="number" class="win-input win-end" min="1" max="24" value="${c.windowEnd}" /> :00</td>
+      <td>
+        <div class="field-row-between">
+          <span>${c.regulation}</span>
+          <button type="button" class="btn-ghost-sm btn-xs">Guardar</button>
+        </div>
+      </td>
     `;
-    tr.addEventListener('click', () => {
-      document.querySelectorAll('#qa-results-table tbody tr').forEach(row => row.classList.remove('selected-row'));
-      tr.classList.add('selected-row');
-      selectQaCase(r);
+
+    const btn = tr.querySelector('button');
+    btn.addEventListener('click', async () => {
+      const windowStart = Number(tr.querySelector('.win-start').value);
+      const windowEnd = Number(tr.querySelector('.win-end').value);
+      const res = await fetch('/api/config/country', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ countryCode: code, windowStart, windowEnd })
+      });
+      const data = await res.json();
+      if (data.country) {
+        countriesMeta[code] = data.country;
+        updateComplianceHint();
+        btn.textContent = 'Guardado ✓';
+        setTimeout(() => { btn.textContent = 'Guardar'; }, 1400);
+      }
     });
+
     tbody.appendChild(tr);
   });
 }
 
-function selectQaCase(tc) {
+// =========================================================================
+// ETAPA 04: SUITE DE 30 CASOS DE QA PRE-PRODUCCIÓN
+// =========================================================================
+function setupQaControls() {
+  document.getElementById('btn-run-qa').addEventListener('click', executeQaSuite);
+
+  document.querySelectorAll('.qa-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.qa-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentQaFilter = btn.dataset.cat;
+      renderQaTable();
+    });
+  });
+
+  document.getElementById('btn-qa-replay').addEventListener('click', () => {
+    if (!selectedQaCase) return;
+    const inp = selectedQaCase.input || {};
+    const countryCode = inp.countryCode || 'AR';
+
+    document.getElementById('sim-country').value = countryCode;
+    if (typeof inp.simulatedHour === 'number') {
+      document.getElementById('sim-hour').value = inp.simulatedHour;
+      document.getElementById('sim-hour-badge').textContent = `${String(inp.simulatedHour).padStart(2, '0')}:00 hs`;
+    }
+    if (inp.userCoords?.lat) {
+      document.getElementById('sim-lat').value = inp.userCoords.lat;
+      document.getElementById('sim-lng').value = inp.userCoords.lng;
+    }
+    updateSimulatorCountryContext(countryCode);
+    sessionState = inp.sessionState ? { ...inp.sessionState } : {};
+
+    navigateToStage('simulator');
+    document.getElementById('chat-messages').innerHTML = '';
+    sendMessage(inp.message);
+  });
+}
+
+async function executeQaSuite() {
+  const btn = document.getElementById('btn-run-qa');
+  btn.textContent = 'Ejecutando...';
+  btn.disabled = true;
+
+  const res = await fetch('/api/qa/run', { method: 'POST' });
+  const report = await res.json();
+  lastQaResults = report.results || [];
+
+  document.getElementById('nav-qa-badge').textContent = `${report.passed}/${report.total}`;
+  document.getElementById('qa-summary-pills').innerHTML = `
+    <span class="status-pill pill-emerald">${report.passed}/${report.total} Aprobados (${report.passRate}%)</span>
+    <span class="pill-mono">${report.executionTimeMs} ms</span>
+  `;
+
+  renderQaTable();
+  if (lastQaResults.length > 0) {
+    inspectQaCase(lastQaResults[0]);
+  }
+
+  btn.textContent = 'Ejecutar 30 Casos Ahora';
+  btn.disabled = false;
+}
+
+function renderQaTable() {
+  const tbody = document.querySelector('#qa-table tbody');
+  tbody.innerHTML = '';
+
+  const filtered = lastQaResults.filter(tc =>
+    currentQaFilter === 'ALL' || tc.category === currentQaFilter
+  );
+
+  filtered.forEach(tc => {
+    const tr = document.createElement('tr');
+    if (selectedQaCase?.id === tc.id) tr.classList.add('selected-row');
+
+    tr.innerHTML = `
+      <td class="pill-mono"><strong>${tc.id}</strong></td>
+      <td>${tc.category}</td>
+      <td><strong>${tc.title}</strong></td>
+      <td><span class="pill-mono">${tc.countryCode}</span></td>
+      <td class="pill-mono">${tc.routedTo}</td>
+      <td><span class="pill-mono">${tc.language.toUpperCase()}</span></td>
+      <td class="pill-mono">${tc.durationMs} ms</td>
+      <td>
+        <span class="status-pill ${tc.passed ? 'pill-emerald' : 'pill-rose'}">
+          ${tc.passed ? 'PASS' : 'FAIL'}
+        </span>
+      </td>
+    `;
+
+    tr.addEventListener('click', () => {
+      document.querySelectorAll('#qa-table tbody tr').forEach(r => r.classList.remove('selected-row'));
+      tr.classList.add('selected-row');
+      inspectQaCase(tc);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function inspectQaCase(tc) {
   selectedQaCase = tc;
-  const detail = {
-    caseId: tc.id,
-    title: tc.title,
-    inputSent: tc.input,
-    routedTo: tc.routedTo,
-    assertionsEvaluated: tc.checks,
-    agentResponse: tc.reply,
-    apiTraces: tc.apiTraces
-  };
-  document.getElementById('qa-case-detail').textContent = JSON.stringify(detail, null, 2);
+  document.getElementById('qa-detail-id').textContent = `${tc.id} · ${tc.category}`;
+  document.getElementById('qa-detail-title').textContent = tc.title;
+  document.getElementById('btn-qa-replay').disabled = false;
+
+  const checksWrap = document.getElementById('qa-detail-checks');
+  checksWrap.innerHTML = '';
+  (tc.checks || []).forEach(ch => {
+    const div = document.createElement('div');
+    div.className = 'qa-check-item';
+    div.innerHTML = `
+      <span><strong>${ch.name}</strong>: esperado <code>${ch.expected}</code></span>
+      <span class="status-pill ${ch.ok ? 'pill-emerald' : 'pill-rose'}">${ch.actual} ${ch.ok ? '✓' : '✗'}</span>
+    `;
+    checksWrap.appendChild(div);
+  });
+
+  document.getElementById('qa-detail-input').textContent = JSON.stringify(tc.input, null, 2);
+  document.getElementById('qa-detail-reply').textContent = tc.reply;
 }
-
-function replaySelectedQaCase() {
-  if (!selectedQaCase) return;
-  const inp = selectedQaCase.input || {};
-  const code = inp.countryCode || 'AR';
-
-  document.getElementById('sim-country').value = code;
-  updateSimulatorCountryContext(code);
-
-  if (typeof inp.simulatedHour === 'number') {
-    document.getElementById('sim-hour').value = inp.simulatedHour;
-    updateWindowStatusPill();
-  } else {
-    document.getElementById('sim-hour').value = 14;
-    updateWindowStatusPill();
-  }
-
-  if (inp.userCoords) {
-    document.getElementById('sim-lat').value = inp.userCoords.lat;
-    document.getElementById('sim-lng').value = inp.userCoords.lng;
-  }
-
-  sessionState = {
-    language: inp.sessionState?.language || countriesMeta[code]?.lang || 'es',
-    countryCode: code,
-    activeAgent: 'SupportTriageAgent',
-    handoffHopCount: inp.sessionState?.handoffHopCount || 0
-  };
-
-  document.querySelector('.nav-tab[data-tab="simulator"]').click();
-  document.getElementById('chat-messages').innerHTML = '';
-  sendMessage(inp.message);
-}
-
-function updateFunnelCounters() {
-  const totalPromises = 412 + livePromisesCount;
-  const pct = ((totalPromises / 1250) * 100).toFixed(1);
-  const el = document.getElementById('fn-promises');
-  if (el) el.textContent = `${totalPromises} (${pct}%)`;
-}
-
-initApp();
