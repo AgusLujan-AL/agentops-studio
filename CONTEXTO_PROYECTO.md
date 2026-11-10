@@ -7,11 +7,11 @@
 
 ## 1. Contexto del Usuario y Objetivo Principal
 
-* **Usuario:** Agustín Luján (`agustin.lujan.it@gmail.com` · Merlo, Buenos Aires, Argentina).
-* **Perfil Técnico:**
-  * **IA Agent Developer en Botmaker** (Feb 2026 – Actualidad) y **Conversational Solution Developer** (Oct 2025 – Feb 2026).
-  * Estudiante de **Ingeniería en Informática (UNLaM)**.
-  * Experiencia real construyendo arquitecturas Multi-Agente con LLMs, integración de APIs REST, acciones de código en JavaScript, flujos multilingües (**Español y Portugués**) para **13 países de Latinoamérica**, geolocalización de sucursales con **`@turf/turf`** ($0 costo de API externa), **WhatsApp Flows** y suites de **30 casos de QA** pre-producción.
+* **Usuario:** Agustín Luján (`agustin.lujan.it@gmail.com` · `+54 9 11 3917-4764` · Merlo, Buenos Aires, Argentina).
+* **Perfil Técnico (según CV):**
+  * **IA Agent Developer en Botmaker** (Diciembre 2025 – Actualidad) y **Asistente Técnico en Forever Pipe** (Marzo 2023 – Septiembre 2025).
+  * Estudiante de **Ingeniería Informática (UNLaM, 2023 – Actualidad)**.
+  * Experiencia real construyendo chatbots y callbots en producción, sistemas de ruteo multi-país y multilingüe (**Español y Portugués**) para **13 países de Latinoamérica** (con resolución de loops infinitos por reseteo de variables), buscador de sucursales geolocalizado con **`Turf.js`** dentro de Code Actions ($0 costo de API externa), integración de **APIs REST** en JavaScript, **WhatsApp Flows** y esquemas multi-agente con baterías de **30 casos de QA**.
 * **GitHub:** `https://github.com/AgusLujan-AL` (`https://github.com/AgusLujan-AL/agentops-studio`)
 * **LinkedIn:** `https://www.linkedin.com/in/agustin-lujan-it/`
 
